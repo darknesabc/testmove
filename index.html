@@ -119,17 +119,17 @@
             box-shadow: 0 0 8px rgba(51, 102, 153, 0.6);
         }
 
-        /* 선택 불가능한 좌석(성별 다름) 시각적 비활성화 스타일 */
+        /* 비활성화 좌석 스타일 */
         .seat-cell.seat.disabled {
             background-color: #f2f2f2;
             color: #c0c0c0;
             border-color: #e0e0e0;
             cursor: not-allowed;
             box-shadow: none;
-            pointer-events: none; /* 마우스 호버 및 클릭 완전 차단 */
+            pointer-events: none;
         }
 
-        /* 중앙 굵은 회색 통로 */
+        /* 통로 */
         .seat-cell.aisle {
             background-color: #7a7a7a; 
             border-radius: 0;
@@ -320,38 +320,30 @@
     <script>
     let moveList = [];
     let selectedTargetSeat = ""; 
-    
-    // ✅ 백엔드에서 명렬표 데이터를 받아와 저장할 빈 객체
     let studentGenderMap = {};
 
-    // 🚨 여기에 본인의 Apps Script 웹앱 URL을 입력하세요!
+    // 🚨 여기에 본인의 Apps Script 웹앱 URL을 잊지 말고 입력하세요!
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYJ_wZv0U63C7_S44sNdzHJcSc5ftD1uNZOC-nNhL7Mm--NdV0ZZ6PRKjoW3m07vAs/exec";
 
-    // ✅ 화면이 열릴 때 자동으로 구글 시트에서 명렬표를 가져옵니다. (캐시 무시 및 강력 방어 버전)
     window.onload = function() {
         console.log("구글 시트에서 성별 명렬표 데이터를 불러오는 중...");
-        
-        // 🚨 URL 끝에 현재 시간을 붙여서 브라우저의 '과거 접속 기억(캐시)'을 강제로 지웁니다.
         const fetchUrl = SCRIPT_URL + "?action=getGenderMap&t=" + new Date().getTime();
         
         fetch(fetchUrl)
-            .then(response => response.text()) // 통신 에러 확인을 위해 텍스트로 안전하게 변환
+            .then(response => response.text())
             .then(text => {
                 try {
                     studentGenderMap = JSON.parse(text); 
-                    console.log("🎉 명렬표 로드 완료! 총 " + Object.keys(studentGenderMap).length + "명의 데이터를 가져왔습니다.");
+                    console.log("명렬표 로드 완료! 총 " + Object.keys(studentGenderMap).length + "명의 데이터를 가져왔습니다.");
                 } catch (e) {
                     console.error("데이터 파싱 에러:", e);
-                    alert("명렬표 시스템 오류입니다. 개발자 도구(F12)의 Console 탭을 확인해주세요.");
                 }
             })
             .catch(error => {
-                console.error("🚨 서버 통신 차단됨:", error);
-                alert("구글 서버 접속이 브라우저 보안에 의해 차단되었습니다.");
+                console.error("서버 통신 차단됨:", error);
             });
     };
 
-    // ✅ [좌석표 데이터] 8칸 구조 (A, B, 통로, C, D, 통로, F, G)
     const seatData = {
         "7-1관": [
             ["7-1A01", "7-1B01", "", "7-1C01", "7-1D01", "", "7-1F01", "7-1G01"],
@@ -460,7 +452,7 @@
                 <td>${moveData.building}</td>
                 <td>${moveData.seatNumber}</td>
                 <td>${moveData.returnTime}교시</td>
-                <td>${moveData.reason}</td>
+                <td>${moveData.displayReason || moveData.reason}</td>
                 <td>${moveData.inputDate}</td>
                 <td>${moveData.inputTime}</td>
                 <td>${moveData.score || '-'}</td>
@@ -494,9 +486,6 @@
         }
     });
 
-    /* ===============================
-       🚨 모달 렌더링 (사전 클릭 차단 및 시각적 비활성화 로직 추가)
-       =============================== */
     document.getElementById("modalBuilding").addEventListener("change", function() {
         const building = this.value;
         const container = document.getElementById("seatMapContainer");
@@ -512,13 +501,10 @@
             return;
         }
 
-        // 현재 폼에 입력된 본인 정보로 성별 파악
         const originalBuilding = document.getElementById("building").value.replace("관", "").trim();
         const seatLetter = document.getElementById("seatNumber").value.trim();
         const seatNum = document.getElementById("seatNumber2").value.trim();
         const studentKey = `${originalBuilding}${seatLetter}${seatNum}`;
-        
-        // 동적으로 불러온 studentGenderMap 객체에서 성별 검색
         const gender = studentGenderMap[studentKey];
         const reason = document.getElementById("reason").value;
 
@@ -532,7 +518,6 @@
                 div.classList.add("seat-cell");
                 const cellText = cell.trim();
 
-                // 절대 좌표 설정
                 div.style.gridRow = (rowIndex + 1).toString();
                 div.style.gridColumn = (colIndex + 1).toString();
 
@@ -561,7 +546,6 @@
                     div.classList.add("seat");
                     div.textContent = cellText;
 
-                    // 🚨 본인 성별에 맞지 않는 좌석은 회색으로 비활성화하여 클릭을 막습니다.
                     let isAllowed = true;
                     if (reason === "심야자습 신청" || reason === "심야자습 취소") {
                         const targetNum = parseInt(cellText.slice(-2), 10);
@@ -570,10 +554,8 @@
                     }
 
                     if (!isAllowed) {
-                        // 선택 불가 좌석 (클릭 이벤트 추가 안 함 + CSS 비활성화)
                         div.classList.add("disabled");
                     } else {
-                        // 정상 선택 가능 좌석
                         div.addEventListener("click", function() {
                             const prevSelected = grid.querySelector(".selected");
                             if (prevSelected) prevSelected.classList.remove("selected");
@@ -617,7 +599,6 @@
                 return;
             }
 
-            // 🚨 명렬표 사전 검증: 구글 시트 데이터에 없는 학생은 모달창 열기를 거부함
             const cleanBuilding = building.replace("관", "").trim(); 
             const studentKey = `${cleanBuilding}${seatLetter.trim()}${seatNum.trim()}`; 
             
@@ -655,7 +636,8 @@
         } else {
             document.getElementById("errorMessage").style.display = "none";
             const originalSeatCombo = seatLetter + seatNum;
-            submitMoveData(building, originalSeatCombo, returnTime, reason, otherReason, score);
+            // 일반 제출일 경우 타겟 좌석은 빈 문자열("") 전송
+            submitMoveData(building, originalSeatCombo, returnTime, reason, otherReason, score, "");
         }
     });
 
@@ -675,9 +657,9 @@
         const seatLetter = document.getElementById("seatNumber").value;
         const seatNum = document.getElementById("seatNumber2").value;
         const originalSeatCombo = seatLetter + seatNum;
-        const originalSeatInfo = `(원래좌석: ${originalBuilding} ${originalSeatCombo})`;
         
-        submitMoveData(targetBuilding, selectedTargetSeat, returnTime, reason, originalSeatInfo, score);
+        // 🚨 본인의 원래 관/좌석을 유지한 채 타겟 좌석 정보를 추가 매개변수로 던집니다.
+        submitMoveData(originalBuilding, originalSeatCombo, returnTime, reason, "", score, selectedTargetSeat);
         
         document.getElementById("popup").style.display = "none";
         document.getElementById("popupOverlay").style.display = "none";
@@ -688,26 +670,35 @@
         document.getElementById("popupOverlay").style.display = "none";
     }
 
-    function submitMoveData(building, seatNumber, returnTime, reason, otherReason, score) {
+    // 🚨 targetSeat 매개변수 추가 (심야자습일 때만 값이 들어옴)
+    function submitMoveData(building, seatNumber, returnTime, reason, otherReason, score, targetSeat) {
         const now = new Date();
         const inputDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
         const inputTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
 
+        // 🚨 사유(reason)를 변질시키지 않고 순수하게 유지
+        const cleanReason = reason === "기타" ? otherReason : reason;
+
         const moveData = {
-            building,
-            seatNumber,
-            returnTime,
-            reason: reason === "기타" ? otherReason : reason,
+            building: building,         // 원래 관
+            seatNumber: seatNumber,     // 원래 좌석
+            returnTime: returnTime,     
+            reason: cleanReason,        // 순수 사유 ("심야자습 신청" 등)
             score: ["입/퇴실 미준수","핸드폰 미제출","전자기기 무단사용","핸드폰 무단사용","무단이탈","타층/타관 무단출입","핸드폰/Wifi 무단반입","무단결석","원내대화","무단지각","취침강제하원","음식물섭취",].includes(reason) ? score : null,
-            inputDate,
-            inputTime
+            inputDate: inputDate,
+            inputTime: inputTime,
+            targetSeat: targetSeat || "" // 새로 추가된 G열 타겟 데이터!
         };
-        
+
+        // UI 표에 보여주기 위한 텍스트 (심야자습일 경우 "이동: 7-1B32" 표시)
+        let displayReason = cleanReason;
         if (reason === "심야자습 신청" || reason === "심야자습 취소") {
-            moveData.reason = `${reason} ${otherReason}`;
+            displayReason = `${cleanReason} ➡️ ${targetSeat}`;
         }
 
-        moveList.push(moveData);
+        // 화면 하단 테이블(UI) 업데이트
+        const tableData = { ...moveData, displayReason: displayReason };
+        moveList.push(tableData);
         moveList.sort((a,b) => b.inputTime.localeCompare(a.inputTime));
         refreshMoveList();
 
@@ -718,15 +709,16 @@
 
         setReturnTimeOptionsForNightStudy(false);
 
+        // 구글 시트로 쏴주기
         fetch(SCRIPT_URL, {
             method: 'POST',
             body: JSON.stringify(moveData)
         }).catch(err => console.error("제출 에러:", err));
         
-        // 🚨 요청하신 대로 "성공적으로 제출되었습니다." 팝업창(alert)을 삭제했습니다!
+        // 제출 알림 팝업 완전히 제거!
     }
 
-    // 🚨 요청하신 대로 "테이블을 초기화하시겠습니까?" 묻지 않고 바로 초기화합니다!
+    // 🚨 묻지 않고 바로 테이블 비우기!
     function resetTable() {
         moveList = [];
         refreshMoveList();
