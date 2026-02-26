@@ -311,10 +311,10 @@
     let moveList = [];
     let selectedTargetSeat = ""; 
 
-    // ✅ 지그재그(18열) 배열을 폐기하고 완벽한 8열(A, B, 통로, C, D, 통로, F, G) 구조로 재작성
+    // ✅ 지그재그를 유발하던 18열 배열을 폐기하고, 완벽한 8열[A, B, 통로, C, D, 통로, F, G] 구조로 재정렬했습니다!
     const seatData = {
         "7-1관": [
-            // 상단 구역 (01번 ~ 16번)
+            // --- 상단 구역 (01번 ~ 16번) ---
             ["7-1A01", "7-1B01", "", "7-1C01", "7-1D01", "", "7-1F01", "7-1G01"],
             ["7-1A02", "7-1B02", "", "7-1C02", "7-1D02", "", "7-1F02", "7-1G02"],
             ["7-1A03", "7-1B03", "", "7-1C03", "7-1D03", "", "7-1F03", "7-1G03"],
@@ -331,12 +331,14 @@
             ["",       "7-1B14", "", "7-1C14", "7-1D14", "", "7-1F14", ""],
             ["",       "7-1B15", "", "7-1C15", "7-1D15", "", "7-1F15", ""],
             ["",       "",       "", "7-1C16", "7-1D16", "", "7-1F16", ""],
-            
-            // 중앙 여백 및 타이틀
+
+            // --- 중앙 여백 및 타이틀 ---
+            ["", "", "", "", "", "", "", ""], 
             ["1 페이지", "", "", "", "", "", "", ""],
             ["", "", "", "", "", "", "", "출입문"],
+            ["", "", "", "", "", "", "", ""],
 
-            // 하단 구역 (34번부터 21번까지 내림차순 정렬)
+            // --- 하단 구역 (21번 ~ 34번) 상단과 똑같이 줄맞춤 완벽 적용 ---
             ["",       "",       "", "7-1C34", "7-1D34", "", "7-1F34", "7-1G34"],
             ["",       "",       "", "7-1C33", "7-1D33", "", "7-1F33", "7-1G33"],
             ["",       "7-1B32", "", "7-1C32", "7-1D32", "", "7-1F32", "7-1G32"],
@@ -456,7 +458,7 @@
     });
 
     /* ===============================
-       ✅ A, B, 통로, C, D, 통로, F, G 렌더링 로직
+       ✅ 깨끗해진 배열에 맞춘 렌더링 로직
        =============================== */
     document.getElementById("modalBuilding").addEventListener("change", function() {
         const building = this.value;
@@ -475,7 +477,7 @@
 
         const layout = seatData[building];
         
-        // 🚨 8열 구조에 맞는 깔끔한 너비 설정 (A(42)-B(42)-통로(14)-C(42)-D(42)-통로(14)-F(42)-G(42))
+        // 배열이 8열이므로, 화면도 정확히 8열(좌석42, 통로14)로 나눕니다.
         grid.style.gridTemplateColumns = `42px 42px 14px 42px 42px 14px 42px 42px`; 
         grid.innerHTML = ""; 
         
@@ -485,12 +487,12 @@
                 div.classList.add("seat-cell");
                 const cellText = cell.trim();
 
-                // 2번째(B와 C사이)와 5번째(D와 F사이) 인덱스를 통로로 지정
+                // 2번째와 5번째 인덱스를 무조건 통로로 지정
                 const isAisleCol = (colIndex === 2 || colIndex === 5);
-                const isTopBlock = rowIndex <= 15; // 01~16번 구역
-                const isBottomBlock = rowIndex >= 18; // 21~34번 구역
+                // 상단 구역(0~15번 행)과 하단 구역(20번 행부터 끝까지)에만 통로 그리기
+                const isTopBlock = rowIndex <= 15; 
+                const isBottomBlock = rowIndex >= 20; 
 
-                // 중앙 1페이지/출입문 구역을 제외하고 회색 통로 삽입
                 if (isAisleCol && (isTopBlock || isBottomBlock)) { 
                     div.classList.add("aisle");
                     grid.appendChild(div);
@@ -502,8 +504,8 @@
                 } else if (cellText.includes("출입문")) {
                     div.classList.add("door");
                     div.innerHTML = "🚪<br>출입문";
-                    div.style.gridColumn = "7 / 9"; // G열 쪽 2칸 차지
-                    div.style.gridRow = "span 2"; // 위아래로 2칸 크기
+                    div.style.gridColumn = "7 / 9"; // G열 쪽 공간 차지
+                    div.style.gridRow = "span 2"; 
                 } else if (cellText.includes("페이지")) {
                     div.classList.add("title-text");
                     div.textContent = cellText;
