@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>러셀 테스트 이동일지 작성</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
@@ -61,12 +61,58 @@
         .popup button#popupCancelButton:hover { background-color: #aaa; }
         #alertPopup .popup-buttons button { margin: 0; }
 
-        /* 심야자습 신청 시 기존 좌석번호 select 숨김 */
-        #seatNumber, #seatNumber2 {
-            display: inline-block;
+        /* 좌석 선택 모달 스타일 */
+        #seatSelectModal {
+            display: none; position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%; max-width: 600px; max-height: 80vh;
+            background: white; border-radius: 8px; box-shadow: 0 0 25px rgba(0,0,0,0.3);
+            z-index: 1100; overflow-y: auto; padding: 20px;
+            text-align: center;
         }
-        .night-study #seatNumber, .night-study #seatNumber2 {
-            display: none;
+        #seatSelectModal h2 {
+            margin-bottom: 15px; color: #336699;
+        }
+        .seat-map {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 8px;
+            justify-items: center;
+            margin-bottom: 15px;
+        }
+        .seat {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            line-height: 40px;
+            cursor: pointer;
+            user-select: none;
+            background-color: #f9f9f9;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .seat.selected {
+            background-color: #336699;
+            color: white;
+            border-color: #28597b;
+        }
+        .seat.disabled {
+            background-color: #ddd;
+            color: #888;
+            cursor: not-allowed;
+            border-color: #ccc;
+        }
+        #selectedSeatDisplay {
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        #modalReturnTime {
+            width: 100%; padding: 12px; font-size: 16px; border-radius: 4px; border: 1px solid #ccc;
+            margin-bottom: 15px;
+        }
+        #seatSelectModal button {
+            width: 120px;
+            margin: 0 10px;
         }
 
         @media (max-width: 768px) {
@@ -74,28 +120,28 @@
             button { width: 100%; }
             table, th, td { font-size: 14px; }
             select, textarea { padding: 14px; font-size: 18px; }
+            .seat {
+                width: 32px;
+                height: 32px;
+                line-height: 32px;
+                font-size: 12px;
+            }
         }
         @media (max-width: 480px) {
             body { margin: 10px; }
             h1 { font-size: 20px; }
             select, button { font-size: 14px; }
             th, td { padding: 10px; }
-        }
-
-        /* 좌석선택 모달 좌석 버튼 스타일 */
-        #seatMap button {
-            width: 56px;
-            height: 40px;
-            border-radius: 6px;
-            border: 1px solid #aaa;
-            background-color: #e0e7ff;
-            cursor: pointer;
-            font-size: 12px;
-            user-select: none;
-        }
-        #seatMap button.selected {
-            background-color: #336699;
-            color: white;
+            .seat-map {
+                grid-template-columns: repeat(7, 1fr);
+                gap: 6px;
+            }
+            .seat {
+                width: 28px;
+                height: 28px;
+                line-height: 28px;
+                font-size: 10px;
+            }
         }
     </style>
 </head>
@@ -132,17 +178,17 @@
         <select id="seatNumber2" required>
             <option value="">선택하세요</option>
             <optgroup label="1~40">
-                <option value="01">01</option>
-                <option value="02">02</option>
-                <option value="03">03</option>
-                <option value="04">04</option>
-                <option value="05">05</option>
-                <option value="06">06</option>
-                <option value="07">07</option>
-                <option value="08">08</option>
-                <option value="09">09</option>
-                <option value="10">10</option>
-                <option value="11">11</option>
+                <!-- 좌석번호는 01~40까지 가능한 만큼 채우세요 -->
+                <option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option>
+                <option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option>
+                <option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
+                <option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option>
+                <option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option>
+                <option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option>
+                <option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option>
+                <option value="29">29</option><option value="30">30</option><option value="31">31</option><option value="32">32</option>
+                <option value="33">33</option><option value="34">34</option><option value="35">35</option><option value="36">36</option>
+                <option value="37">37</option><option value="38">38</option><option value="39">39</option><option value="40">40</option>
             </optgroup>
         </select>
 
@@ -163,42 +209,42 @@
         </select>
 
         <label for="reason">이동사유:</label>
-<select id="reason" required>
-  <option value="">선택하세요</option>
+        <select id="reason" required>
+            <option value="">선택하세요</option>
 
-  <optgroup label="일반 이동">
-    <option value="화장실/정수기">화장실/정수기</option>
-    <option value="튜터 질의응답">튜터 질의응답</option>
-    <option value="외부 학원/과외/보충">외부 학원/과외/보충</option>
-    <option value="자료수령">자료수령</option>
-    <option value="가족 행사">가족 행사</option>
-    <option value="병원">병원</option>
-    <option value="식사">식사</option>
-    <option value="기타">기타</option>
-    <option value="조퇴(컨디션난조)">조퇴(컨디션난조)</option>
-  </optgroup>
+            <optgroup label="일반 이동">
+                <option value="화장실/정수기">화장실/정수기</option>
+                <option value="튜터 질의응답">튜터 질의응답</option>
+                <option value="외부 학원/과외/보충">외부 학원/과외/보충</option>
+                <option value="자료수령">자료수령</option>
+                <option value="가족 행사">가족 행사</option>
+                <option value="병원">병원</option>
+                <option value="식사">식사</option>
+                <option value="기타">기타</option>
+                <option value="조퇴(컨디션난조)">조퇴(컨디션난조)</option>
+            </optgroup>
 
-  <optgroup label="심야자습">
-    <option value="심야자습 신청">심야자습 신청</option>
-    <option value="심야자습 취소">심야자습 취소</option>
-  </optgroup>
+            <optgroup label="심야자습">
+                <option value="심야자습 신청">심야자습 신청</option>
+                <option value="심야자습 취소">심야자습 취소</option>
+            </optgroup>
 
-  <optgroup label="규정 위반/지도">
-    <option value="지각">지각</option>
-    <option value="입/퇴실 미준수">입/퇴실 미준수</option>
-    <option value="핸드폰 미제출">핸드폰 미제출</option>
-    <option value="전자기기 무단사용">전자기기 무단사용</option>
-    <option value="핸드폰 무단사용">핸드폰 무단사용</option>
-    <option value="무단이탈">무단이탈</option>
-    <option value="타층/타관 무단출입">타층/타관 무단출입</option>
-    <option value="핸드폰/Wifi 무단반입">핸드폰/Wifi 무단반입</option>
-    <option value="무단결석">무단결석</option>
-    <option value="원내대화">원내대화</option>
-    <option value="무단지각">무단지각</option>
-    <option value="취침강제하원">취침강제하원</option>
-    <option value="음식물섭취">음식물섭취</option>
-  </optgroup>
-</select>
+            <optgroup label="규정 위반/지도">
+                <option value="지각">지각</option>
+                <option value="입/퇴실 미준수">입/퇴실 미준수</option>
+                <option value="핸드폰 미제출">핸드폰 미제출</option>
+                <option value="전자기기 무단사용">전자기기 무단사용</option>
+                <option value="핸드폰 무단사용">핸드폰 무단사용</option>
+                <option value="무단이탈">무단이탈</option>
+                <option value="타층/타관 무단출입">타층/타관 무단출입</option>
+                <option value="핸드폰/Wifi 무단반입">핸드폰/Wifi 무단반입</option>
+                <option value="무단결석">무단결석</option>
+                <option value="원내대화">원내대화</option>
+                <option value="무단지각">무단지각</option>
+                <option value="취침강제하원">취침강제하원</option>
+                <option value="음식물섭취">음식물섭취</option>
+            </optgroup>
+        </select>
 
         <div id="scoreDiv" class="score">
             <label for="score">점수 (1~10점):</label>
@@ -241,10 +287,10 @@
 
     <div class="error" id="errorMessage">기타 사유를 입력해주세요.</div>
 
-    <!-- ✅ 심야자습 신청/취소 팝업창 -->
+    <!-- 심야자습 신청/취소 팝업창 -->
     <div id="popup" class="popup">
         <div class="popup-content">
-            <h2>심야자습 신청/취소</h2>
+            <h2>심야자습 신청/취소 확인</h2>
             <p>관: <span id="popupBuilding"></span></p>
             <p>좌석번호: <span id="popupSeatNumber"></span></p>
             <p>희망교시: <span id="popupReturnTime"></span></p>
@@ -256,7 +302,7 @@
         </div>
     </div>
 
-    <!-- ✅ 중앙 안내 팝업(확인 버튼 1개) -->
+    <!-- 중앙 안내 팝업(확인 버튼 1개) -->
     <div id="alertPopup" class="popup">
         <div class="popup-content">
             <h2>안내</h2>
@@ -267,31 +313,31 @@
         </div>
     </div>
 
-    <!-- 심야자습 좌석 선택 모달 -->
-    <div id="seatSelectModal" class="popup" style="width: 90%; max-width: 700px;">
-        <div class="popup-content" style="text-align: left;">
-            <h2>심야자습 좌석 선택</h2>
-            <p>좌석을 선택해주세요.</p>
-            <div id="seatMap" style="display: grid; grid-template-columns: repeat(8, 60px); gap: 8px; max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 8px; background: #f5faff;"></div>
-            <p style="margin-top: 10px;">
-                선택 좌석: <span id="selectedSeatDisplay">없음</span>
-            </p>
-            <label for="modalReturnTime">희망 복귀 교시 선택:</label>
-            <select id="modalReturnTime" style="width: 100%; padding: 8px; margin-top: 5px; font-size: 16px;">
-                <option value="">선택하세요</option>
-                <option value="9">9교시</option>
-                <option value="10">10교시</option>
-                <option value="복귀안함">복귀안함</option>
-            </select>
-            <div class="popup-buttons" style="text-align: center; margin-top: 15px;">
-                <button id="seatModalSubmit">제출</button>
-                <button id="seatModalCancel">취소</button>
-            </div>
+    <!-- 좌석 선택 모달 -->
+    <div id="seatSelectModal">
+        <h2>좌석 선택</h2>
+        <div class="seat-map" id="seatMap">
+            <!-- 좌석 버튼들 여기 생성 -->
+        </div>
+        <p>선택된 좌석: <span id="selectedSeatDisplay">없음</span></p>
+        <label for="modalReturnTime">희망 복귀 교시 선택:</label>
+        <select id="modalReturnTime">
+            <option value="">선택하세요</option>
+            <option value="9">9교시</option>
+            <option value="10">10교시</option>
+            <option value="복귀안함">복귀안함</option>
+        </select>
+        <div>
+            <button id="seatModalSubmit">확인</button>
+            <button id="seatModalCancel">취소</button>
         </div>
     </div>
 
     <script>
     let moveList = [];
+
+    // 좌석 선택 상태
+    let selectedSeat = null;
 
     /* ===============================
        심야자습 신청/취소 차단 설정
@@ -303,315 +349,134 @@
     const nightStudyBlockedDates = new Set([
         "2026-01-31",
         "2026-02-01",
-        "2026-03-01"
+        "2026-02-02"
     ]);
 
-    // 한국시간 기준 YYYY-MM-DD 반환
-    function getKSTDateString(date = new Date()) {
-        return new Intl.DateTimeFormat("sv-SE", {
-            timeZone: "Asia/Seoul"
-        }).format(date);
-    }
+    // 오늘 요일 가져오기 (0:일,1:월,...6:토)
+    const today = new Date();
+    const todayDay = today.getDay();
 
-    // 심야자습 차단 여부 판단 (토/일 + 특정 날짜)
-    function isNightStudyBlocked() {
-        const nowKST = new Date(
-            new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })
-        );
+    // 현재 날짜 문자열 YYYY-MM-DD
+    const todayStr = today.toISOString().split('T')[0];
 
-        const day = nowKST.getDay(); // 0=일요일, 6=토요일
-        const today = getKSTDateString(nowKST);
-
-        // 1) 토요일/일요일 차단
-        if (day === 0 || day === 6) return true;
-
-        // 2) 특정 날짜 차단
-        if (nightStudyBlockedDates.has(today)) return true;
-
-        return false;
-    }
-
-    // ✅ 중앙 안내 팝업 띄우기/닫기
-    function showCenterAlert(message) {
-        document.getElementById("alertPopupMessage").textContent = message;
-        document.getElementById("alertPopup").style.display = "block";
-    }
-    function closeCenterAlert() {
-        document.getElementById("alertPopup").style.display = "none";
-    }
-    document.getElementById("alertPopupOkButton").addEventListener("click", closeCenterAlert);
-
-    /* ===============================
-       ✅ 심야자습 선택 시 복귀교시를 9/10만 선택 가능하게
-       - 다른 사유로 바꾸면 다시 전체 교시 복구
-       =============================== */
+    // 폼, 요소 가져오기
+    const moveForm = document.getElementById("moveForm");
+    const buildingSelect = document.getElementById("building");
+    const seatNumberSelect = document.getElementById("seatNumber");
+    const seatNumber2Select = document.getElementById("seatNumber2");
     const returnTimeSelect = document.getElementById("returnTime");
-    const originalReturnTimeOptionsHTML = returnTimeSelect.innerHTML; // 전체 옵션 저장
+    const reasonSelect = document.getElementById("reason");
+    const scoreDiv = document.getElementById("scoreDiv");
+    const scoreSelect = document.getElementById("score");
+    const otherReasonTextarea = document.getElementById("otherReason");
+    const otherReasonLabel = document.getElementById("otherReasonLabel");
+    const errorMessage = document.getElementById("errorMessage");
 
-    function setReturnTimeOptionsForNightStudy(isNightStudy) {
-        if (isNightStudy) {
-            // 현재 선택값 초기화(혹시 1~8 선택되어 있던 경우)
-            returnTimeSelect.value = "";
+    // 팝업 요소
+    const popup = document.getElementById("popup");
+    const popupBuilding = document.getElementById("popupBuilding");
+    const popupSeatNumber = document.getElementById("popupSeatNumber");
+    const popupReturnTime = document.getElementById("popupReturnTime");
+    const popupReason = document.getElementById("popupReason");
+    const popupSubmitButton = document.getElementById("popupSubmitButton");
+    const popupCancelButton = document.getElementById("popupCancelButton");
 
-            // 9,10,복귀안함 만 옵션으로 변경
-            returnTimeSelect.innerHTML = `
-                <option value="">선택하세요</option>
-                <option value="9">9교시</option>
-                <option value="10">10교시</option>
-                <option value="복귀안함">복귀안함</option>
-            `;
-        } else {
-            returnTimeSelect.innerHTML = originalReturnTimeOptionsHTML;
+    // 중앙 안내 팝업
+    const alertPopup = document.getElementById("alertPopup");
+    const alertPopupMessage = document.getElementById("alertPopupMessage");
+    const alertPopupOkButton = document.getElementById("alertPopupOkButton");
+
+    // 좌석 모달
+    const seatSelectModal = document.getElementById("seatSelectModal");
+    const seatMap = document.getElementById("seatMap");
+    const selectedSeatDisplay = document.getElementById("selectedSeatDisplay");
+    const modalReturnTime = document.getElementById("modalReturnTime");
+    const seatModalSubmit = document.getElementById("seatModalSubmit");
+    const seatModalCancel = document.getElementById("seatModalCancel");
+
+    // 좌석 생성 함수 (A01 ~ I40)
+    function createSeatMap() {
+        seatMap.innerHTML = "";
+        const rows = ['A', 'B', 'C', 'D', 'F', 'G', 'H', 'I']; // E 뺌 (기존 선택지와 동일)
+        const cols = 40;
+
+        for (let r = 0; r < rows.length; r++) {
+            for (let c = 1; c <= cols; c++) {
+                const seatId = rows[r] + (c < 10 ? "0" + c : c);
+                const seatBtn = document.createElement("div");
+                seatBtn.classList.add("seat");
+                seatBtn.textContent = seatId;
+                seatBtn.dataset.seat = seatId;
+
+                seatBtn.addEventListener("click", () => {
+                    // 이미 선택된 좌석이면 선택 해제
+                    if (selectedSeat === seatId) {
+                        selectedSeat = null;
+                        seatBtn.classList.remove("selected");
+                        selectedSeatDisplay.textContent = "없음";
+                    } else {
+                        // 다른 좌석 선택시 기존 선택 제거
+                        const prevSelected = seatMap.querySelector(".seat.selected");
+                        if (prevSelected) prevSelected.classList.remove("selected");
+
+                        selectedSeat = seatId;
+                        seatBtn.classList.add("selected");
+                        selectedSeatDisplay.textContent = seatId;
+                    }
+                });
+
+                seatMap.appendChild(seatBtn);
+            }
         }
     }
 
-    /* ===============================
-       기타 사유 입력 토글
-       점수 입력 토글
-       좌석번호 셀렉트 토글
-       =============================== */
-    const reasonSelect = document.getElementById("reason");
-    const otherReasonTextarea = document.getElementById("otherReason");
-    const otherReasonLabel = document.getElementById("otherReasonLabel");
-    const scoreDiv = document.getElementById("scoreDiv");
-    const seatNumberSelect = document.getElementById("seatNumber");
-    const seatNumber2Select = document.getElementById("seatNumber2");
-    const moveForm = document.getElementById("moveForm");
+    // 센터 팝업 경고 함수
+    function showCenterAlert(message) {
+        alertPopupMessage.textContent = message;
+        alertPopup.style.display = "block";
+    }
 
+    alertPopupOkButton.addEventListener("click", () => {
+        alertPopup.style.display = "none";
+    });
+
+    // 제출 시 점수 보이기/숨기기, 기타 사유 textarea 보이기/숨기기
     reasonSelect.addEventListener("change", () => {
-        const reason = reasonSelect.value;
-
-        // 기타 사유 표시
-        if (reason === "기타") {
+        const val = reasonSelect.value;
+        if (val === "기타") {
             otherReasonTextarea.style.display = "block";
             otherReasonLabel.style.display = "block";
+            scoreDiv.style.display = "none";
+        } else if (val === "심야자습 신청" || val === "심야자습 취소") {
+            otherReasonTextarea.style.display = "none";
+            otherReasonLabel.style.display = "none";
+            scoreDiv.style.display = "none";
+        } else if (val === "") {
+            otherReasonTextarea.style.display = "none";
+            otherReasonLabel.style.display = "none";
+            scoreDiv.style.display = "none";
         } else {
             otherReasonTextarea.style.display = "none";
             otherReasonLabel.style.display = "none";
-        }
-
-        // 점수 입력 표시 (규정 위반/지도)
-        const scoreReasons = [
-            "지각", "입/퇴실 미준수", "핸드폰 미제출", "전자기기 무단사용", "핸드폰 무단사용",
-            "무단이탈", "타층/타관 무단출입", "핸드폰/Wifi 무단반입", "무단결석",
-            "원내대화", "무단지각", "취침강제하원", "음식물섭취"
-        ];
-        if (scoreReasons.includes(reason)) {
             scoreDiv.style.display = "block";
-        } else {
-            scoreDiv.style.display = "none";
-        }
-
-        // 심야자습 선택 시 좌석번호 select 숨김 및 모달 준비
-        if (reason === "심야자습 신청" || reason === "심야자습 취소") {
-            seatNumberSelect.style.display = "none";
-            seatNumber2Select.style.display = "none";
-            moveForm.classList.add("night-study");
-
-            createSeatMap(); // 좌석맵 생성
-            selectedSeat = null;
-            document.getElementById("selectedSeatDisplay").textContent = "없음";
-
-            setReturnTimeOptionsForNightStudy(true);
-        } else {
-            seatNumberSelect.style.display = "inline-block";
-            seatNumber2Select.style.display = "inline-block";
-            moveForm.classList.remove("night-study");
-            setReturnTimeOptionsForNightStudy(false);
         }
     });
 
-    /* ===============================
-       좌석 데이터 및 좌석맵 생성
-       =============================== */
-    const nightStudySeats = [
-        "7-1A01","7-1A02","7-1A03","7-1A04","7-1A05","7-1A06","7-1A07","7-1A08","7-1A09","7-1A10","7-1A11","7-1A12","7-1A13",
-        "7-1B01","7-1B02","7-1B03","7-1B04","7-1B05","7-1B06","7-1B07","7-1B08","7-1B09","7-1B10","7-1B11","7-1B12","7-1B13","7-1B14","7-1B15",
-    ];
-
-    const seatMapDiv = document.getElementById("seatMap");
-    let selectedSeat = null;
-
-    function createSeatMap() {
-        seatMapDiv.innerHTML = ""; // 초기화
-
-        nightStudySeats.forEach(seat => {
-            const btn = document.createElement("button");
-            btn.textContent = seat;
-            btn.classList.remove("selected");
-
-            btn.addEventListener("click", () => {
-                selectedSeat = seat;
-                document.getElementById("selectedSeatDisplay").textContent = selectedSeat;
-
-                // 선택한 좌석 스타일 초기화 후 강조
-                Array.from(seatMapDiv.children).forEach(child => child.classList.remove("selected"));
-                btn.classList.add("selected");
-            });
-
-            seatMapDiv.appendChild(btn);
-        });
+    // 테이블 초기화 함수
+    function resetTable() {
+        if (confirm("테이블을 초기화하시겠습니까?")) {
+            moveList = [];
+            renderTable();
+        }
     }
 
-    /* ===============================
-       폼 제출 시 심야자습일 때 좌석 모달 띄우기
-       =============================== */
-    moveForm.addEventListener("submit", function(event) {
-        event.preventDefault();
-
-        const building = document.getElementById("building").value;
-        const reason = document.getElementById("reason").value;
-
-        let seatNumber = null;
-        if (reason === "심야자습 신청" || reason === "심야자습 취소") {
-            seatNumber = selectedSeat;
-            if (!seatNumber) {
-                showCenterAlert("좌석을 선택해주세요.");
-                return;
-            }
-        } else {
-            seatNumber = document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
-            if (!seatNumber || seatNumber.length < 2) {
-                showCenterAlert("좌석번호를 선택해주세요.");
-                return;
-            }
-        }
-
-        const returnTime = (reason === "심야자습 신청" || reason === "심야자습 취소")
-            ? document.getElementById("modalReturnTime").value || document.getElementById("returnTime").value
-            : document.getElementById("returnTime").value;
-
-        const otherReason = document.getElementById("otherReason").value.trim();
-        const score = parseInt(document.getElementById("score").value) || null;
-
-        // 심야자습 차단 확인
-        if (reason === "심야자습 신청" || reason === "심야자습 취소") {
-            if (isNightStudyBlocked()) {
-                showCenterAlert("토요일,일요일 및 지정된 날짜에는 심야자습 신청/취소가 불가능합니다.");
-                return;
-            }
-            if (!["9","10","복귀안함"].includes(returnTime)) {
-                showCenterAlert("심야자습 신청/취소는 복귀교시를 9교시 또는 10교시(또는 복귀안함)만 선택할 수 있습니다.");
-                return;
-            }
-            if (!building || !seatNumber || !returnTime) {
-                showCenterAlert("관, 좌석번호, 희망교시는 반드시 입력해야 합니다.");
-                return;
-            }
-
-            // 심야자습 신청 팝업 띄우기
-            document.getElementById("popupBuilding").textContent = building;
-            document.getElementById("popupSeatNumber").textContent = seatNumber;
-            document.getElementById("popupReturnTime").textContent = returnTime;
-            document.getElementById("popupReason").textContent = reason;
-
-            document.getElementById("popup").style.display = "block";
-
-        } else if (reason === "기타" && otherReason === "") {
-            document.getElementById("errorMessage").style.display = "block";
-            return;
-        } else {
-            document.getElementById("errorMessage").style.display = "none";
-            submitMoveData(building, seatNumber, returnTime, reason, otherReason, score);
-        }
-    });
-
-    /* ===============================
-       심야자습 좌석선택 모달 제출/취소 버튼 동작
-       =============================== */
-    document.getElementById("seatModalSubmit").addEventListener("click", () => {
-        const modalReturnTime = document.getElementById("modalReturnTime").value;
-        if (!selectedSeat) {
-            showCenterAlert("좌석을 선택해주세요.");
-            return;
-        }
-        if (!modalReturnTime) {
-            showCenterAlert("희망 복귀 교시를 선택해주세요.");
-            return;
-        }
-
-        // 폼 내 복귀교시도 업데이트 (숨겨진 필드에)
-        document.getElementById("returnTime").value = modalReturnTime;
-
-        // 모달 닫기
-        document.getElementById("seatSelectModal").style.display = "none";
-
-        // 심야자습 신청 팝업 띄우기
-        document.getElementById("popupBuilding").textContent = document.getElementById("building").value;
-        document.getElementById("popupSeatNumber").textContent = selectedSeat;
-        document.getElementById("popupReturnTime").textContent = modalReturnTime;
-        document.getElementById("popupReason").textContent = document.getElementById("reason").value;
-
-        document.getElementById("popup").style.display = "block";
-    });
-
-    document.getElementById("seatModalCancel").addEventListener("click", () => {
-        document.getElementById("seatSelectModal").style.display = "none";
-    });
-
-    /* ===============================
-       심야자습 신청 팝업 취소/제출 버튼
-       =============================== */
-    document.getElementById("popupCancelButton").addEventListener("click", () => {
-        document.getElementById("popup").style.display = "none";
-    });
-
-    document.getElementById("popupSubmitButton").addEventListener("click", () => {
-        const building = document.getElementById("popupBuilding").textContent;
-        const seatNumber = document.getElementById("popupSeatNumber").textContent;
-        const returnTime = document.getElementById("popupReturnTime").textContent;
-        const reason = document.getElementById("popupReason").textContent;
-
-        // 심야자습 신청/취소시 점수는 0점 처리
-        submitMoveData(building, seatNumber, returnTime, reason, "", 0);
-
-        document.getElementById("popup").style.display = "none";
-    });
-
-    /* ===============================
-       기타 함수
-       =============================== */
-
-    // 서버에 저장 + 테이블 갱신 시뮬레이션
-    function submitMoveData(building, seatNumber, returnTime, reason, otherReason, score) {
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, "0");
-        const dd = String(now.getDate()).padStart(2, "0");
-        const hh = String(now.getHours()).padStart(2, "0");
-        const min = String(now.getMinutes()).padStart(2, "0");
-
-        const inputDate = `${yyyy}-${mm}-${dd}`;
-        const inputTime = `${hh}:${min}`;
-
-        const displayReason = (reason === "기타") ? otherReason : reason;
-        const displayScore = score === null || score === undefined ? "-" : score;
-
-        const newEntry = {
-            building,
-            seatNumber,
-            returnTime,
-            reason: displayReason,
-            inputDate,
-            inputTime,
-            score: displayScore
-        };
-
-        moveList.push(newEntry);
-        updateTable();
-
-        // 제출 후 초기화
-        resetForm();
-    }
-
-    // 테이블 갱신
-    function updateTable() {
+    // 테이블 렌더링 함수
+    function renderTable() {
         const tbody = document.querySelector("#moveList tbody");
         tbody.innerHTML = "";
 
         moveList.forEach(item => {
             const tr = document.createElement("tr");
-
             tr.innerHTML = `
                 <td>${item.building}</td>
                 <td>${item.seatNumber}</td>
@@ -619,35 +484,166 @@
                 <td>${item.reason}</td>
                 <td>${item.inputDate}</td>
                 <td>${item.inputTime}</td>
-                <td>${item.score}</td>
+                <td>${item.score || ""}</td>
             `;
-
             tbody.appendChild(tr);
         });
     }
 
-    // 폼 초기화
-    function resetForm() {
+    // 제출 이벤트 처리 (심야자습 선택시 좌석 모달부터 띄우도록 수정)
+    moveForm.addEventListener("submit", function(event) {
+        event.preventDefault();
+
+        // 날짜 차단 및 요일 차단 검사 (심야자습 신청/취소 시만)
+        const reasonVal = reasonSelect.value;
+        if (reasonVal === "심야자습 신청" || reasonVal === "심야자습 취소") {
+            if (todayDay === 0 || todayDay === 6) {
+                showCenterAlert("토요일과 일요일에는 심야자습 신청이 불가능합니다.");
+                return;
+            }
+            if (nightStudyBlockedDates.has(todayStr)) {
+                showCenterAlert("오늘은 심야자습 신청이 불가능한 날짜입니다.");
+                return;
+            }
+
+            // 좌석 모달 띄우기
+            createSeatMap();
+            selectedSeat = null;
+            selectedSeatDisplay.textContent = "없음";
+            modalReturnTime.value = "";
+            seatSelectModal.style.display = "block";
+
+            // 제출 중단 - 좌석 모달에서 다시 제출 진행
+            return;
+        }
+
+        // 일반 제출 처리
+        const building = buildingSelect.value;
+        const seatNum1 = seatNumberSelect.value;
+        const seatNum2 = seatNumber2Select.value;
+        const seatNumber = seatNum1 + seatNum2;
+        const returnTime = returnTimeSelect.value;
+        const reason = reasonVal;
+
+        // 기타 사유 검사
+        if (reason === "기타" && otherReasonTextarea.value.trim() === "") {
+            errorMessage.style.display = "block";
+            setTimeout(() => errorMessage.style.display = "none", 1500);
+            return;
+        }
+
+        const scoreVal = scoreSelect.value;
+
+        // 현재 시간, 날짜
+        const now = new Date();
+        const inputDate = now.toISOString().slice(0, 10);
+        const inputTime = now.toTimeString().slice(0, 8);
+
+        const entry = {
+            building,
+            seatNumber,
+            returnTime,
+            reason: reason === "기타" ? otherReasonTextarea.value.trim() : reason,
+            inputDate,
+            inputTime,
+            score: scoreVal
+        };
+
+        moveList.push(entry);
+        renderTable();
+
+        // 제출 후 초기화
         moveForm.reset();
         otherReasonTextarea.style.display = "none";
         otherReasonLabel.style.display = "none";
         scoreDiv.style.display = "none";
-        seatNumberSelect.style.display = "inline-block";
-        seatNumber2Select.style.display = "inline-block";
-        moveForm.classList.remove("night-study");
-        setReturnTimeOptionsForNightStudy(false);
-        selectedSeat = null;
-        document.getElementById("selectedSeatDisplay").textContent = "없음";
-        document.getElementById("errorMessage").style.display = "none";
-    }
+    });
 
-    // 테이블 초기화 버튼 클릭
-    function resetTable() {
-        if (confirm("테이블을 초기화하시겠습니까?")) {
-            moveList = [];
-            updateTable();
+    // 좌석 모달 제출 버튼 클릭 시 처리
+    seatModalSubmit.addEventListener("click", () => {
+        const returnTimeVal = modalReturnTime.value;
+
+        if (!selectedSeat) {
+            showCenterAlert("좌석을 선택해주세요.");
+            return;
         }
-    }
+        if (!returnTimeVal) {
+            showCenterAlert("희망 복귀 교시를 선택해주세요.");
+            return;
+        }
+
+        // 좌석번호 분리 (글자+숫자) -> 폼에 맞게 나누기
+        const seatLetter = selectedSeat.charAt(0);
+        const seatNum = selectedSeat.slice(1);
+
+        // 팝업에 정보 채우기
+        popupBuilding.textContent = buildingSelect.value;
+        popupSeatNumber.textContent = selectedSeat;
+        popupReturnTime.textContent = returnTimeVal;
+        popupReason.textContent = reasonSelect.value;
+
+        // 좌석번호 폼에도 세팅 (보조)
+        seatNumberSelect.value = seatLetter;
+        seatNumber2Select.value = seatNum;
+        returnTimeSelect.value = returnTimeVal;
+
+        // 좌석 모달 닫고 팝업 열기
+        seatSelectModal.style.display = "none";
+        popup.style.display = "block";
+    });
+
+    // 좌석 모달 취소 버튼 클릭 시 닫기
+    seatModalCancel.addEventListener("click", () => {
+        seatSelectModal.style.display = "none";
+    });
+
+    // 팝업 제출 버튼 클릭 시 (최종 제출)
+    popupSubmitButton.addEventListener("click", () => {
+        // 폼 값 다시 읽기
+        const building = buildingSelect.value;
+        const seatNum1 = seatNumberSelect.value;
+        const seatNum2 = seatNumber2Select.value;
+        const seatNumber = seatNum1 + seatNum2;
+        const returnTime = returnTimeSelect.value;
+        const reason = reasonSelect.value;
+
+        // 점수는 심야자습 시 비워둠
+        const scoreVal = "";
+
+        const now = new Date();
+        const inputDate = now.toISOString().slice(0, 10);
+        const inputTime = now.toTimeString().slice(0, 8);
+
+        const entry = {
+            building,
+            seatNumber,
+            returnTime,
+            reason,
+            inputDate,
+            inputTime,
+            score: scoreVal
+        };
+
+        moveList.push(entry);
+        renderTable();
+
+        // 팝업 닫기
+        popup.style.display = "none";
+
+        // 폼 초기화
+        moveForm.reset();
+        scoreDiv.style.display = "none";
+        otherReasonTextarea.style.display = "none";
+        otherReasonLabel.style.display = "none";
+
+        selectedSeat = null;
+        selectedSeatDisplay.textContent = "없음";
+    });
+
+    // 팝업 취소 버튼 클릭 시 닫기
+    popupCancelButton.addEventListener("click", () => {
+        popup.style.display = "none";
+    });
 
     </script>
 </body>
