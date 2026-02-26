@@ -119,7 +119,7 @@
             box-shadow: 0 0 8px rgba(51, 102, 153, 0.6);
         }
 
-        /* 🚨 [추가] 선택 불가능한 좌석(성별 다름) 시각적 비활성화 스타일 */
+        /* 선택 불가능한 좌석(성별 다름) 시각적 비활성화 스타일 */
         .seat-cell.seat.disabled {
             background-color: #f2f2f2;
             color: #c0c0c0;
@@ -327,19 +327,27 @@
     // 🚨 여기에 본인의 Apps Script 웹앱 URL을 입력하세요!
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYJ_wZv0U63C7_S44sNdzHJcSc5ftD1uNZOC-nNhL7Mm--NdV0ZZ6PRKjoW3m07vAs/exec";
 
-    // ✅ 화면이 열릴 때 자동으로 구글 시트에서 명렬표를 가져옵니다.
+    // ✅ 화면이 열릴 때 자동으로 구글 시트에서 명렬표를 가져옵니다. (캐시 무시 및 강력 방어 버전)
     window.onload = function() {
         console.log("구글 시트에서 성별 명렬표 데이터를 불러오는 중...");
         
-        fetch(SCRIPT_URL + "?action=getGenderMap")
-            .then(response => response.json())
-            .then(data => {
-                studentGenderMap = data; // 백엔드에서 받아온 데이터로 지도 갱신!
-                console.log("명렬표 로드 완료! 총 " + Object.keys(studentGenderMap).length + "명의 데이터를 가져왔습니다.");
+        // 🚨 URL 끝에 현재 시간을 붙여서 브라우저의 '과거 접속 기억(캐시)'을 강제로 지웁니다.
+        const fetchUrl = SCRIPT_URL + "?action=getGenderMap&t=" + new Date().getTime();
+        
+        fetch(fetchUrl)
+            .then(response => response.text()) // 통신 에러 확인을 위해 텍스트로 안전하게 변환
+            .then(text => {
+                try {
+                    studentGenderMap = JSON.parse(text); 
+                    console.log("🎉 명렬표 로드 완료! 총 " + Object.keys(studentGenderMap).length + "명의 데이터를 가져왔습니다.");
+                } catch (e) {
+                    console.error("데이터 파싱 에러:", e);
+                    alert("명렬표 시스템 오류입니다. 개발자 도구(F12)의 Console 탭을 확인해주세요.");
+                }
             })
             .catch(error => {
-                console.error("명렬표 로드 실패:", error);
-                alert("명렬표 데이터를 불러오는데 실패했습니다. 인터넷 연결 상태를 확인해주세요.");
+                console.error("🚨 서버 통신 차단됨:", error);
+                alert("구글 서버 접속이 브라우저 보안에 의해 차단되었습니다.");
             });
     };
 
@@ -467,7 +475,7 @@
         setReturnTimeOptionsForNightStudy(isNightStudy);
 
         const scoreReasons = ["무단이탈","전자기기 무단사용","핸드폰/Wifi 무단반입","핸드폰 무단사용",
-            "무단결석","타층/타관 무단출입","원내대화","무단지각","취침강제하원","음식물섭취","입/퇴실 미준수","핸 পণ্ডিত 미제출"];
+            "무단결석","타층/타관 무단출입","원내대화","무단지각","취침강제하원","음식물섭취","입/퇴실 미준수","핸드폰 미제출"];
 
         document.getElementById("scoreDiv").style.display = scoreReasons.includes(value) ? "block" : "none";
 
@@ -715,16 +723,14 @@
             body: JSON.stringify(moveData)
         }).catch(err => console.error("제출 에러:", err));
         
-        alert("성공적으로 제출되었습니다.");
+        // 🚨 요청하신 대로 "성공적으로 제출되었습니다." 팝업창(alert)을 삭제했습니다!
     }
 
+    // 🚨 요청하신 대로 "테이블을 초기화하시겠습니까?" 묻지 않고 바로 초기화합니다!
     function resetTable() {
-        if(confirm("기록된 테이블을 초기화하시겠습니까?")) {
-            moveList = [];
-            refreshMoveList();
-        }
+        moveList = [];
+        refreshMoveList();
     }
     </script>
 </body>
 </html>
-
