@@ -61,69 +61,62 @@
         .popup button#popupCancelButton:hover { background-color: #aaa; }
         #alertPopup .popup-buttons button { margin: 0; }
 
-        /* ✅ 좌석표 모달 관련 추가 스타일 (엑셀 비율 반영) */
+        /* ✅ 좌석표 모달 관련 추가 스타일 (엑셀과 완벽히 동일한 격자) */
         .seat-map-container {
             width: 100%;
-            max-height: 400px;
-            overflow-y: auto;
-            overflow-x: auto;
+            max-height: 450px; /* 지도가 세로로 기니까 스크롤 영역을 살짝 늘려줍니다 */
+            overflow: auto; /* 상하좌우 스크롤 허용 */
             margin-top: 15px;
             border: 1px solid #ddd;
-            padding: 10px;
-            background: #f4f7f6;
+            padding: 15px;
+            background: #fdfdfd;
             border-radius: 4px;
             display: none; 
         }
         .seat-grid {
             display: grid;
-            gap: 2px; /* 엑셀 빈칸을 그대로 쓰므로 gap을 줄여서 밀도있게 배치 */
-            justify-content: start; /* 왼쪽 정렬로 엑셀 느낌 살림 */
-            min-width: max-content; /* 좌우 스크롤이 생기도록 내용물 크기 보장 */
+            gap: 1px; /* 엑셀의 테두리 선 느낌 */
+            background-color: #eee; /* 빈칸 사이사이의 테두리 색상 역할 */
+            padding: 1px;
+            width: max-content; /* 좌우가 짤리지 않고 늘어나게 함 */
+            margin: 0 auto;
         }
         .seat-cell {
-            padding: 6px 2px;
-            font-size: 12px; /* 폰트 사이즈 조정 */
+            background-color: #fff; /* 기본 칸 색상 */
+            width: 45px; /* 엑셀 칸 너비 */
+            height: 25px; /* 엑셀 칸 높이 */
+            font-size: 11px;
             text-align: center;
-            border-radius: 4px;
-            user-select: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 25px;
+            user-select: none;
+            box-sizing: border-box;
         }
         .seat-cell.seat {
-            background-color: #fff;
-            border: 1px solid #ccc;
+            background-color: #e9f0f5; /* 좌석이 있는 칸의 색상 */
+            border: 1px solid #99c2ff;
             cursor: pointer;
-            transition: all 0.2s;
             color: #333;
-            min-width: 45px; /* 좌석 버튼의 최소 너비 */
+            font-weight: bold;
         }
         .seat-cell.seat:hover {
-            background-color: #e6f0fa;
+            background-color: #cce0ff;
         }
         .seat-cell.seat.selected {
-            background-color: #336699;
+            background-color: #336699; /* 클릭 시 강조 색상 */
             color: white;
-            border-color: #28597b;
-            font-weight: bold;
-            box-shadow: 0 0 5px rgba(51, 102, 153, 0.5);
+            border: 2px solid #1a3a5c;
         }
         .seat-cell.empty {
-            background-color: transparent;
-            border: none;
-            pointer-events: none;
-            min-width: 20px; /* 빈 공간(통로)의 기본 너비 */
+            /* 데이터가 없는 엑셀 빈칸 */
+            background-color: #fff;
         }
         .seat-cell.text-only {
-            background-color: transparent;
-            border: none;
-            font-weight: bold;
+            /* 출입문, 기둥, 인문, 자연 등의 텍스트칸 */
+            background-color: #f9f9f9;
             color: #666;
-            pointer-events: none;
-            grid-column: 1 / -1;
-            text-align: left;
-            padding-left: 10px;
+            font-size: 10px;
         }
 
         @media (max-width: 768px) {
@@ -470,7 +463,7 @@
     });
 
     /* ===============================
-       ✅ 모달창 내에서 관 선택 시 좌석 그리기 로직 (엑셀비율)
+       ✅ 모달창 내에서 관 선택 시 엑셀 격자(Grid) 그대로 그리기
        =============================== */
     document.getElementById("modalBuilding").addEventListener("change", function() {
         const building = this.value;
@@ -491,10 +484,11 @@
         }
 
         const layout = seatData[building];
-        let maxCols = 0;
-        layout.forEach(row => { if (row.length > maxCols) maxCols = row.length; });
+        // 엑셀의 열(Column) 개수 (7-1관 기준 18개)
+        const cols = layout[0].length; 
         
-        grid.style.gridTemplateColumns = `repeat(${maxCols}, minmax(20px, auto))`; // 열 너비를 자동(최소 20px)으로 조정
+        // CSS Grid로 엑셀의 열 개수만큼 칸을 일정하게 분할
+        grid.style.gridTemplateColumns = `repeat(${cols}, 45px)`; 
         grid.innerHTML = ""; 
         
         layout.forEach(row => {
@@ -504,11 +498,25 @@
                 const cellText = cell.trim();
 
                 if (cellText === "") {
-                    div.classList.add("empty"); // 엑셀의 빈칸을 그대로 여백으로 사용
-                } else if (cellText.includes("배치도") || cellText.includes("출입문") || cellText.includes("기둥") || cellText.includes("인문") || cellText.includes("자연")) {
+                    // 엑셀 빈칸
+                    div.classList.add("empty"); 
+                } else if (
+                    cellText.includes("배치도") || 
+                    cellText.includes("출입문") || 
+                    cellText.includes("기둥") || 
+                    cellText.includes("인문") || 
+                    cellText.includes("자연")
+                ) {
+                    // 글씨만 있는 칸 (좌석 아님)
                     div.classList.add("text-only");
                     div.textContent = cellText;
+                    
+                    // 만약 '배치도' 글씨가 길면 엑셀처럼 여러 칸을 합치는 효과를 줄 수도 있음
+                    if(cellText.includes("배치도")) {
+                        div.style.gridColumn = "span 3"; // 가로 3칸 차지
+                    }
                 } else {
+                    // 실제 클릭 가능한 좌석 칸
                     div.classList.add("seat");
                     div.textContent = cellText;
                     
@@ -659,3 +667,4 @@
     </script>
 </body>
 </html>
+
