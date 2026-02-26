@@ -77,7 +77,7 @@
             box-sizing: border-box;
         }
 
-        /* 8열 완벽 그리드 */
+        /* 8열 완벽 그리드 (자동 밀림 방지를 위해 간격만 유지) */
         .seat-grid {
             display: grid;
             gap: 2px 4px; 
@@ -311,7 +311,8 @@
     let moveList = [];
     let selectedTargetSeat = ""; 
 
-    // ✅ [수정] 명렬표: "관" 글자를 제외하고 띄어쓰기 없이 직관적인 코드로 작성 (예: "4-1A01")
+    // ✅ [명렬표 데이터] 성별 검증용 - "관" 글자를 제외하고 띄어쓰기 없이 직관적으로 작성
+    // 실제 데이터베이스 연동 전까지 테스트용으로 사용합니다.
     const studentGenderMap = {
         "4-1A01": "여",
         "7-1A01": "남",
@@ -322,9 +323,10 @@
         "7-1F25": "여"
     };
 
+    // ✅ [좌석표 데이터] 8칸 구조 (A, B, 통로, C, D, 통로, F, G)
     const seatData = {
         "7-1관": [
-            // --- 상단 구역 (01번 ~ 16번) --- 
+            // --- 상단 구역 (01번 ~ 16번) --- (Row index 0~15)
             ["7-1A01", "7-1B01", "", "7-1C01", "7-1D01", "", "7-1F01", "7-1G01"],
             ["7-1A02", "7-1B02", "", "7-1C02", "7-1D02", "", "7-1F02", "7-1G02"],
             ["7-1A03", "7-1B03", "", "7-1C03", "7-1D03", "", "7-1F03", "7-1G03"],
@@ -342,13 +344,13 @@
             ["",       "7-1B15", "", "7-1C15", "7-1D15", "", "7-1F15", ""],
             ["",       "",       "", "7-1C16", "7-1D16", "", "7-1F16", ""],
 
-            // --- 중앙 여백 및 타이틀 --- 
+            // --- 중앙 여백 및 타이틀 --- (Row index 16~19)
             ["", "", "", "", "", "", "", ""], 
             ["1 페이지", "", "", "", "", "", "", ""],
             ["", "", "", "", "", "", "", "출입문"],
             ["", "", "", "", "", "", "", ""],
 
-            // --- 하단 구역 (21번 ~ 34번) --- 
+            // --- 하단 구역 (21번 ~ 34번) --- (Row index 20~33)
             ["",       "",       "", "7-1C34", "7-1D34", "", "7-1F34", "7-1G34"], 
             ["",       "",       "", "7-1C33", "7-1D33", "", "7-1F33", "7-1G33"], 
             ["",       "7-1B32", "", "7-1C32", "7-1D32", "", "7-1F32", "7-1G32"], 
@@ -467,6 +469,9 @@
         }
     });
 
+    /* ===============================
+       🚨 모달 렌더링 로직 (고정 좌표로 밀림 완벽 차단)
+       =============================== */
     document.getElementById("modalBuilding").addEventListener("change", function() {
         const building = this.value;
         const container = document.getElementById("seatMapContainer");
@@ -492,12 +497,13 @@
                 div.classList.add("seat-cell");
                 const cellText = cell.trim();
 
+                // 🚨 배열의 요소마다 고유 좌표 부여 (자동 밀림 100% 방지)
                 div.style.gridRow = (rowIndex + 1).toString();
                 div.style.gridColumn = (colIndex + 1).toString();
 
-                const isAisleCol = (colIndex === 2 || colIndex === 5);
-                const isTopBlock = rowIndex <= 15; 
-                const isBottomBlock = rowIndex >= 20; 
+                const isAisleCol = (colIndex === 2 || colIndex === 5); // 통로 열
+                const isTopBlock = rowIndex <= 15; // 상단 블록
+                const isBottomBlock = rowIndex >= 20; // 하단 블록
 
                 if (isAisleCol && (isTopBlock || isBottomBlock)) { 
                     div.classList.add("aisle");
@@ -510,11 +516,13 @@
                 } else if (cellText.includes("출입문")) {
                     div.classList.add("door");
                     div.innerHTML = "🚪<br>출입문";
+                    // 출입문만 좌표 덮어쓰기 (크기 확장)
                     div.style.gridColumn = "7 / 9"; 
                     div.style.gridRow = `${rowIndex + 1} / span 2`; 
                 } else if (cellText.includes("페이지")) {
                     div.classList.add("title-text");
                     div.textContent = cellText;
+                    // 제목 텍스트만 가로 전체 차지하도록 덮어쓰기
                     div.style.gridColumn = "1 / -1"; 
                 } else {
                     div.classList.add("seat");
@@ -541,7 +549,8 @@
         event.preventDefault();
 
         const building = document.getElementById("building").value;
-        const seatNumber = document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
+        const seatLetter = document.getElementById("seatNumber").value;
+        const seatNum = document.getElementById("seatNumber2").value;
         const returnTime = document.getElementById("returnTime").value;
         const reason = document.getElementById("reason").value;
         const otherReason = document.getElementById("otherReason").value;
@@ -556,12 +565,12 @@
                 showCenterAlert("심야자습 신청/취소는 복귀교시를 9교시 또는 10교시(또는 복귀안함)만 선택할 수 있습니다.");
                 return;
             }
-            if (!building || !seatNumber || !returnTime) {
+            if (!building || !seatLetter || !seatNum || !returnTime) {
                 showCenterAlert("관, 좌석번호, 희망교시는 반드시 입력해야 합니다.");
                 return;
             }
 
-            document.getElementById("popupOriginalSeat").textContent = `${building} ${seatNumber}`;
+            document.getElementById("popupOriginalSeat").textContent = `${building} ${seatLetter}${seatNum}`;
             document.getElementById("popupReturnTime").textContent = returnTime;
             document.getElementById("popupReason").textContent = reason;
 
@@ -589,7 +598,8 @@
             return;
         } else {
             document.getElementById("errorMessage").style.display = "none";
-            submitMoveData(building, seatNumber, returnTime, reason, otherReason, score);
+            const originalSeatCombo = seatLetter + seatNum;
+            submitMoveData(building, originalSeatCombo, returnTime, reason, otherReason, score);
         }
     });
 
@@ -605,33 +615,37 @@
         const reason = document.getElementById("reason").value;
         const score = parseInt(document.getElementById("score").value) || null;
 
+        // 폼에서 입력된 요소들 가져오기
         const originalBuilding = document.getElementById("building").value;
-        const originalSeatCombo = document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
+        const seatLetter = document.getElementById("seatNumber").value;
+        const seatNum = document.getElementById("seatNumber2").value;
 
         // ==========================================
-        // 🚨 [수정] 남/여 구역 검증 처리 ("관" 글자 제거 로직)
+        // 🚨 [수정] 성별 검증 및 공백/문자 완벽 제거 로직
         // ==========================================
         if (reason === "심야자습 신청" || reason === "심야자습 취소") {
             
-            // "4-1관" 에서 "관"이라는 글자를 지우고 -> "4-1"을 만듭니다.
-            const cleanBuilding = originalBuilding.replace("관", ""); 
+            // "4-1관" -> "4-1" 변환 및 양옆 공백 제거
+            const cleanBuilding = originalBuilding.replace("관", "").trim(); 
+            // 좌석 알파벳(A)과 번호(01)의 공백 제거
+            const cleanLetter = seatLetter.trim();
+            const cleanNum = seatNum.trim();
+
+            // 공백 없이 3가지를 조합하여 명렬표 검색용 키 생성 -> "4-1A01"
+            const studentKey = `${cleanBuilding}${cleanLetter}${cleanNum}`; 
             
-            // "4-1" 과 "A01"을 공백 없이 그대로 붙입니다 -> "4-1A01"
-            const studentKey = `${cleanBuilding}${originalSeatCombo}`; 
-            
-            // 1. 명렬표에서 성별 가져오기
+            // 명렬표에서 성별 조회
             let gender = studentGenderMap[studentKey];
 
-            // 2. 명렬표에 성별 정보가 등록되어 있지 않으면 제출 차단 (안전장치)
+            // 명렬표에 등록되지 않은 경우 즉시 제출 차단
             if (!gender) {
-                alert(`[${studentKey}] 좌석은 성별 명렬표에 등록되지 않았습니다.\n코드 상단의 studentGenderMap에 추가해주세요.`);
+                alert(`[${studentKey}] 좌석은 성별 명렬표에 등록되지 않았습니다.\n코드 상단의 studentGenderMap에 해당 좌석을 추가해주세요.`);
                 return; // 제출 중단
             }
 
-            // 3. 사용자가 맵에서 클릭한 타겟 좌석 번호 파악 (예: "7-1A25" -> 25)
+            // 타겟 좌석 번호(뒷자리) 검사
             const targetNum = parseInt(selectedTargetSeat.slice(-2), 10);
 
-            // 4. 성별에 따른 구역 제한 검사
             if (gender === "남" && (targetNum > 16)) {
                 alert("남학생은 심야자습 좌석으로 01~16번 구역만 선택할 수 있습니다.");
                 return; // 제출 중단
@@ -642,6 +656,7 @@
         }
         // ==========================================
 
+        const originalSeatCombo = seatLetter + seatNum;
         const originalSeatInfo = `(원래좌석: ${originalBuilding} ${originalSeatCombo})`;
 
         submitMoveData(targetBuilding, selectedTargetSeat, returnTime, reason, originalSeatInfo, score);
