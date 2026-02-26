@@ -66,7 +66,7 @@
         /* ✅ 디자인이 전면 개선된 좌석표 컨테이너 */
         .seat-map-container {
             width: 100%;
-            max-height: 450px;
+            max-height: 480px;
             overflow: auto; 
             margin-top: 15px;
             border: 1px solid #e0e0e0;
@@ -77,19 +77,17 @@
             box-sizing: border-box;
         }
 
-        /* ✅ 18열 배열에 맞춘 CSS Grid 설정 (Gap 분리) */
+        /* ✅ A,B,C,D,F,G를 밀착시키기 위한 Grid 간격 설정 */
         .seat-grid {
             display: grid;
-            /* 위아래 간격(row-gap)은 줄이고, 양옆 간격(column-gap)만 유지 */
-            gap: 2px 4px; 
-            justify-content: start; 
+            gap: 2px 2px; /* 상하좌우 2px의 좁은 간격만 허용 */
+            justify-content: center; 
             width: max-content; 
             margin: 0 auto;
         }
         
         .seat-cell {
-            width: 42px; 
-            height: 24px; /* 셀 높이를 약간 줄여서 촘촘하게 만듦 */
+            height: 24px; /* 높이를 살짝 줄여서 엑셀 느낌 강화 */
             font-size: 11px;
             text-align: center;
             display: flex;
@@ -97,22 +95,22 @@
             justify-content: center;
             user-select: none;
             box-sizing: border-box;
-            border-radius: 4px; 
+            border-radius: 3px; 
             transition: transform 0.1s, box-shadow 0.1s;
         }
         
-        /* ✅ 실제 클릭 가능한 좌석 스타일 */
+        /* 실제 좌석 (A, B, C 등) */
         .seat-cell.seat {
             background-color: #ffffff;
-            border: 1px solid #c0c8d6; /* 테두리 약간 옅게 */
+            border: 1px solid #b3bccc;
             cursor: pointer;
-            color: #444;
+            color: #333;
             font-weight: 600;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         .seat-cell.seat:hover {
             background-color: #e3effa;
-            border-color: #99c2ff;
+            border-color: #336699;
             transform: translateY(-1px);
         }
         .seat-cell.seat.selected {
@@ -122,45 +120,35 @@
             box-shadow: 0 0 8px rgba(51, 102, 153, 0.6);
         }
 
-        /* ✅ 끊김 없는 매끄러운 통로 스타일 (중요) */
+        /* ✅ 중앙 굵은 회색 통로 (조각나지 않게 연결) */
         .seat-cell.aisle {
             background-color: #7a7a7a; 
-            width: 12px; /* 통로 너비를 좁게 (엑셀 선 느낌) */
-            height: 100%; 
-            margin: 0 auto; /* 중앙 정렬 */
             border-radius: 0;
             border: none;
-            /* 상하 gap(2px)을 무시하고 위아래 박스와 연결되도록 스케일 조정 */
-            transform: scaleY(1.2); 
-            z-index: 1; /* 다른 빈칸보다 위로 오게 */
+            width: 100%; 
+            height: 100%;
+            transform: scaleY(1.2); /* 상하 2px 간격을 덮어서 하나로 연결된 선으로 만듦 */
+            z-index: 1;
             pointer-events: none;
         }
 
-        /* 빈 공간 (투명) */
+        /* 빈 공간 (0px로 압축되어 사실상 안 보임) */
         .seat-cell.empty {
             background-color: transparent;
             border: none;
-            box-shadow: none;
+            padding: 0;
             pointer-events: none;
         }
-        /* 텍스트 (기둥 등) */
-        .seat-cell.text-only {
-            background-color: transparent;
-            border: none;
-            box-shadow: none;
-            font-weight: bold;
-            color: #999;
-            font-size: 11px;
-            pointer-events: none;
-        }
-        /* 타이틀 텍스트 (배치도) */
+        
+        /* 텍스트 (배치도 등) */
         .seat-cell.title-text {
             color: #336699;
             font-size: 18px;
             font-weight: 900;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
             justify-content: center;
         }
+        
         /* 출입문 특별 스타일 */
         .seat-cell.door {
             background-color: #e2f0d9;
@@ -177,7 +165,6 @@
             button { width: 100%; }
             table, th, td { font-size: 14px; }
             select, textarea { padding: 14px; font-size: 16px; }
-            .seat-cell { width: 36px; height: 26px; font-size: 10px; }
         }
     </style>
 </head>
@@ -328,10 +315,10 @@
     let moveList = [];
     let selectedTargetSeat = ""; 
 
-    // ✅ 기존 18열 원본 데이터 완벽 유지
+    // ✅ 사용자의 원본 18열 배열 그대로 유지
     const seatData = {
         "7-1관": [
-            ["", "", "", "", "", "", "1 페이지", "", "", "", "", "", "", "", "", "", "", ""], // "배치도" 글자를 중앙으로 이동
+            ["7-1관 좌석 배치도", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
             ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
             ["", "", "", "7-1B01", "", "", "7-1C01", "", "", "7-1D01", "", "", "7-1F01", "", "", "", "", ""],
             ["7-1A01", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
@@ -507,7 +494,7 @@
     });
 
     /* ===============================
-       ✅ 모달창 내 좌석 렌더링 로직 (통로 끊김 방지)
+       ✅ A,B,C,D,F,G 밀착 & 통로 구현 로직
        =============================== */
     document.getElementById("modalBuilding").addEventListener("change", function() {
         const building = this.value;
@@ -532,9 +519,17 @@
         }
 
         const layout = seatData[building];
-        const cols = layout[0].length; 
         
-        grid.style.gridTemplateColumns = `repeat(${cols}, 42px)`; 
+        // 🚨 핵심 수정 부분 🚨
+        // 18열 중 좌석이 들어가는 열(A, B, C, D, F, G)은 42px, 
+        // 통로가 되는 열(4번째, 10번째)은 14px,
+        // 그 외 빈 공간으로 쓰이는 열은 0px로 압축하여 서로 밀착시킵니다.
+        grid.style.gridTemplateColumns = `
+            42px 0px 0px 42px 14px 0px 
+            42px 0px 0px 42px 14px 0px 
+            42px 0px 0px 42px 0px 0px
+        `; 
+        
         grid.innerHTML = ""; 
         
         layout.forEach((row, rowIndex) => {
@@ -543,9 +538,13 @@
                 div.classList.add("seat-cell");
                 const cellText = cell.trim();
 
-                // ✅ 끊김 없는 회색 통로 처리 (4번, 10번 열)
-                if ((colIndex === 4 || colIndex === 10) && rowIndex > 0 && rowIndex < 36) { 
-                    // rowIndex < 36 은 "출입문" 근처 가로 통로에서 선을 끊어주기 위함
+                // 첫 번째 이미지처럼 1페이지 상단/하단 블록에만 회색 통로를 그립니다.
+                // (중앙 빈 공간인 33행~40행 사이는 통로를 그리지 않아 자연스럽게 단절시킵니다)
+                const isAisleCol = (colIndex === 4 || colIndex === 10);
+                const isTopBlock = rowIndex > 0 && rowIndex <= 32;
+                const isBottomBlock = rowIndex >= 41;
+
+                if (isAisleCol && (isTopBlock || isBottomBlock)) { 
                     div.classList.add("aisle");
                     grid.appendChild(div);
                     return; 
@@ -556,13 +555,12 @@
                 } else if (cellText.includes("출입문")) {
                     div.classList.add("door");
                     div.innerHTML = "🚪<br>출입문";
-                    div.style.gridColumn = "span 2"; 
-                    div.style.gridRow = "span 4"; // 출입문을 세로로 길게 (선택사항)
-                    div.style.height = "100%";
-                } else if (cellText.includes("페이지")) {
-                    div.classList.add("text-only", "title-text");
+                    div.style.gridColumn = "16 / 19"; // G열이 있는 16~18 위치를 병합
+                    div.style.gridRow = "span 6"; // 출입문 세로 크기 확대
+                } else if (cellText.includes("배치도") || cellText.includes("페이지")) {
+                    div.classList.add("title-text");
                     div.textContent = cellText;
-                    div.style.gridColumn = "span 6"; // "1 페이지" 글자를 넓게 차지
+                    div.style.gridColumn = "1 / -1"; // 맨 위 제목줄 전체 차지
                 } else {
                     div.classList.add("seat");
                     div.textContent = cellText;
