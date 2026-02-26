@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>러셀 이동일지 작성</title>
+    <title>러셀 테스트 이동일지 작성</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
         h1 { color: #336699; font-size: 24px; }
@@ -83,9 +83,11 @@
         <label for="building">관:</label>
         <select id="building" required>
             <option value="">선택하세요</option>
-            <option value="5-1관">5-1관</option>
-            <option value="5-2관">5-2관</option>
-            <option value="5-3관">5-3관</option>
+            <option value="4-1관">4-1관</option>
+            <option value="4-2관">4-2관</option>
+            <option value="4-3관">4-3관</option>
+            <option value="4-4관">4-4관</option>
+            <option value="4-5관">4-5관</option>
         </select>
 
         <label for="seatNumber">좌석번호:</label>
@@ -98,6 +100,8 @@
                 <option value="D">D</option>
                 <option value="F">F</option>
                 <option value="G">G</option>
+                <option value="H">H</option>
+                <option value="I">I</option>
             </optgroup>
         </select>
 
@@ -115,31 +119,6 @@
                 <option value="09">09</option>
                 <option value="10">10</option>
                 <option value="11">11</option>
-                <option value="12">12</option>
-                <option value="13">13</option>
-                <option value="14">14</option>
-                <option value="15">15</option>
-                <option value="16">16</option>
-                <option value="17">17</option>
-                <option value="18">18</option>
-                <option value="19">19</option>
-                <option value="20">20</option>
-                <option value="21">21</option>
-                <option value="22">22</option>
-                <option value="23">23</option>
-                <option value="24">24</option>
-                <option value="25">25</option>
-                <option value="26">26</option>
-                <option value="27">27</option>
-                <option value="28">28</option>
-                <option value="29">29</option>
-                <option value="30">30</option>
-                <option value="31">31</option>
-                <option value="32">32</option>
-                <option value="33">33</option>
-                <option value="34">34</option>
-                <option value="35">35</option>
-                <option value="36">36</option>
             </optgroup>
         </select>
 
@@ -520,7 +499,7 @@
         setReturnTimeOptionsForNightStudy(false);
 
         // 서버 전송
-        fetch('https://script.google.com/macros/s/AKfycbyO3_XoamjQF9F7pRazW9L_3P0TqEGH1pg2373ifiob9GJKwfjqV35f0KF053NHElyz/exec', {
+        fetch('https://script.google.com/macros/s/AKfycbyYJ_wZv0U63C7_S44sNdzHJcSc5ftD1uNZOC-nNhL7Mm--NdV0ZZ6PRKjoW3m07vAs/exec', {
             method: 'POST',
             body: JSON.stringify(moveData)
         });
@@ -533,9 +512,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
