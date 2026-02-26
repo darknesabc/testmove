@@ -139,8 +139,8 @@
             <option value="">선택하세요</option>
             <option value="1">1교시</option><option value="2">2교시</option><option value="3">3교시</option>
             <option value="4">4교시</option><option value="5">5교시</option><option value="6">6교시</option>
-            <option value="7">7교시</option><option value="8">8교시</option><option value="9">9교시</option>
-            <option value="10">10교시</option><option value="복귀안함">복귀안함</option>
+            <option value="7">7교시</option><option value="8">8교시</option>
+            <option value="복귀안함">복귀안함</option>
         </select>
 
         <label for="reason">이동사유:</label>
@@ -244,9 +244,9 @@
     let selectedTargetSeat = ""; 
     
     let studentGenderMap = {};
-    let userReservations = {}; // 🚨 누가 어디 예약했는지 짝지어둔 데이터!
+    let userReservations = {}; 
 
-    // 🚨 본인의 웹앱 URL 입력!
+    // 🚨 본인의 웹앱 URL을 입력하세요!
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYJ_wZv0U63C7_S44sNdzHJcSc5ftD1uNZOC-nNhL7Mm--NdV0ZZ6PRKjoW3m07vAs/exec";
 
     window.onload = function() {
@@ -333,12 +333,15 @@
     }
     document.getElementById("alertPopupOkButton").addEventListener("click", closeCenterAlert);
 
+    // 🚨 복귀교시 옵션을 동적으로 변경하는 로직
     const returnTimeSelect = document.getElementById("returnTime");
-    const originalReturnTimeOptionsHTML = returnTimeSelect.innerHTML;
-
+    
     function setReturnTimeOptionsForNightStudy(isNightStudy) {
+        // 이전에 선택된 값을 기억
+        const prev = returnTimeSelect.value;
+        
         if (isNightStudy) {
-            returnTimeSelect.value = "";
+            // 심야자습 관련 사유를 선택했을 때 (9, 10교시, 복귀안함)
             returnTimeSelect.innerHTML = `
                 <option value="">선택하세요</option>
                 <option value="9">9교시</option>
@@ -346,13 +349,26 @@
                 <option value="복귀안함">복귀안함</option>
             `;
         } else {
-            const prev = returnTimeSelect.value;
-            returnTimeSelect.innerHTML = originalReturnTimeOptionsHTML;
-            if ([...returnTimeSelect.options].some(o => o.value === prev)) {
-                returnTimeSelect.value = prev;
-            } else {
-                returnTimeSelect.value = "";
-            }
+            // 일반 사유를 선택했을 때 (1~8교시, 복귀안함)
+            returnTimeSelect.innerHTML = `
+                <option value="">선택하세요</option>
+                <option value="1">1교시</option>
+                <option value="2">2교시</option>
+                <option value="3">3교시</option>
+                <option value="4">4교시</option>
+                <option value="5">5교시</option>
+                <option value="6">6교시</option>
+                <option value="7">7교시</option>
+                <option value="8">8교시</option>
+                <option value="복귀안함">복귀안함</option>
+            `;
+        }
+        
+        // 새로 바뀐 옵션 목록에 이전 선택값이 존재한다면 유지, 아니면 초기화
+        if ([...returnTimeSelect.options].some(o => o.value === prev)) {
+            returnTimeSelect.value = prev;
+        } else {
+            returnTimeSelect.value = "";
         }
     }
 
@@ -383,6 +399,8 @@
     document.getElementById("reason").addEventListener("change", function() {
         const value = this.value;
         const isNightStudy = (value === "심야자습 신청" || value === "심야자습 취소");
+        
+        // 이유가 바뀔 때마다 복귀교시 목록을 업데이트
         setReturnTimeOptionsForNightStudy(isNightStudy);
 
         const scoreReasons = ["무단이탈","전자기기 무단사용","핸드폰/Wifi 무단반입","핸드폰 무단사용",
@@ -405,7 +423,6 @@
         }
     });
 
-    // 🚨 지도 그리는 로직 완벽 제어
     document.getElementById("modalBuilding").addEventListener("change", function() {
         const building = this.value;
         const container = document.getElementById("seatMapContainer");
@@ -426,7 +443,6 @@
         const gender = studentGenderMap[studentKey];
         const reason = document.getElementById("reason").value;
 
-        // 내가 이미 예약해둔 자리가 있는지 확인
         const myReservedSeat = userReservations[studentKey];
 
         if (reason === "심야자습 취소") {
@@ -477,21 +493,16 @@
                     let isAllowed = true;
                     let isAlreadyReserved = false;
 
-                    // 🚨 1. 남의 자리 신청 막기 및 내 취소 자리만 켜기!
                     if (reason === "심야자습 취소") {
-                        // 취소일 때는 내가 신청했던 그 자리 하나만 활성화
                         if (cellText !== myReservedSeat) {
                             isAllowed = false;
                         }
                     } else if (reason === "심야자습 신청") {
-                        // 신청일 때는 남/여 구역 통제 먼저
                         const targetNum = parseInt(cellText.slice(-2), 10);
                         if (gender === "남" && targetNum > 16) isAllowed = false;
                         if (gender === "여" && (targetNum < 21 || targetNum > 36)) isAllowed = false;
 
-                        // 전체 예약된 자리 목록 가져오기
                         const allReservedSeats = Object.values(userReservations);
-                        // 누가 이미 신청한 자리면 막아버림
                         if (allReservedSeats.includes(cellText)) {
                             isAllowed = false;
                             isAlreadyReserved = true; 
@@ -554,7 +565,6 @@
                 return;
             }
 
-            // 🚨 제출 전 완벽한 이중 체크!
             if (reason === "심야자습 신청" && userReservations[studentKey]) {
                 alert(`이미 심야자습 자리를 신청하셨습니다.\n(예약된 자리: ${userReservations[studentKey]})\n변경을 원하시면 기존 자리를 취소 후 다시 신청해주세요.`);
                 return;
@@ -650,7 +660,6 @@
         if (reason === "심야자습 신청" || reason === "심야자습 취소") {
             displayReason = `${cleanReason} ➡️ ${targetSeat}`;
             
-            // 제출 즉시 브라우저 상의 내 예약 상태를 동기화 시켜줍니다.
             if (reason === "심야자습 신청") {
                 userReservations[studentKey] = targetSeat;
             } else if (reason === "심야자습 취소") {
@@ -667,6 +676,8 @@
         document.getElementById("scoreDiv").style.display = "none";
         document.getElementById("otherReason").style.display = "none";
         document.getElementById("otherReasonLabel").style.display = "none";
+        
+        // 폼 리셋 후에는 일반 사유 기준(1~8교시)으로 복귀교시 옵션 원상복구
         setReturnTimeOptionsForNightStudy(false);
 
         fetch(SCRIPT_URL, {
