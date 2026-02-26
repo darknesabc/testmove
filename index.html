@@ -77,17 +77,19 @@
             box-sizing: border-box;
         }
 
-        /* ✅ 18열 배열에 맞춘 CSS Grid 설정 */
+        /* ✅ 18열 배열에 맞춘 CSS Grid 설정 (Gap 분리) */
         .seat-grid {
             display: grid;
-            gap: 4px; 
+            /* 위아래 간격(row-gap)은 줄이고, 양옆 간격(column-gap)만 유지 */
+            gap: 2px 4px; 
             justify-content: start; 
             width: max-content; 
             margin: 0 auto;
         }
+        
         .seat-cell {
             width: 42px; 
-            height: 30px;
+            height: 24px; /* 셀 높이를 약간 줄여서 촘촘하게 만듦 */
             font-size: 11px;
             text-align: center;
             display: flex;
@@ -95,39 +97,42 @@
             justify-content: center;
             user-select: none;
             box-sizing: border-box;
-            border-radius: 6px; 
+            border-radius: 4px; 
             transition: transform 0.1s, box-shadow 0.1s;
         }
         
         /* ✅ 실제 클릭 가능한 좌석 스타일 */
         .seat-cell.seat {
             background-color: #ffffff;
-            border: 1px solid #d1d9e6;
+            border: 1px solid #c0c8d6; /* 테두리 약간 옅게 */
             cursor: pointer;
             color: #444;
             font-weight: 600;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         .seat-cell.seat:hover {
             background-color: #e3effa;
             border-color: #99c2ff;
             transform: translateY(-1px);
-            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
         }
         .seat-cell.seat.selected {
             background-color: #336699; 
             color: white;
             border-color: #1a3a5c;
             box-shadow: 0 0 8px rgba(51, 102, 153, 0.6);
-            transform: translateY(-1px);
         }
 
-        /* ✅ 새로 추가된 중앙 통로 스타일 (이미지 재현용) */
+        /* ✅ 끊김 없는 매끄러운 통로 스타일 (중요) */
         .seat-cell.aisle {
-            background-color: #8c8c8c; 
+            background-color: #7a7a7a; 
+            width: 12px; /* 통로 너비를 좁게 (엑셀 선 느낌) */
+            height: 100%; 
+            margin: 0 auto; /* 중앙 정렬 */
             border-radius: 0;
             border: none;
-            width: 100%; /* 부모 grid 폭에 맞춤 */
+            /* 상하 gap(2px)을 무시하고 위아래 박스와 연결되도록 스케일 조정 */
+            transform: scaleY(1.2); 
+            z-index: 1; /* 다른 빈칸보다 위로 오게 */
             pointer-events: none;
         }
 
@@ -151,21 +156,20 @@
         /* 타이틀 텍스트 (배치도) */
         .seat-cell.title-text {
             color: #336699;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 900;
-            justify-content: flex-start;
-            padding-left: 5px;
+            letter-spacing: 3px;
+            justify-content: center;
         }
         /* 출입문 특별 스타일 */
         .seat-cell.door {
             background-color: #e2f0d9;
             color: #274e13;
             border: 1px dashed #93c47d;
-            border-radius: 6px;
+            border-radius: 4px;
             justify-content: center;
             font-weight: bold;
             font-size: 11px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
 
         @media (max-width: 768px) {
@@ -327,7 +331,7 @@
     // ✅ 기존 18열 원본 데이터 완벽 유지
     const seatData = {
         "7-1관": [
-            ["7-1관 좌석 배치도", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+            ["", "", "", "", "", "", "1 페이지", "", "", "", "", "", "", "", "", "", "", ""], // "배치도" 글자를 중앙으로 이동
             ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
             ["", "", "", "7-1B01", "", "", "7-1C01", "", "", "7-1D01", "", "", "7-1F01", "", "", "", "", ""],
             ["7-1A01", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
@@ -503,7 +507,7 @@
     });
 
     /* ===============================
-       ✅ 모달창 내 좌석 렌더링 로직 (18열 구조 + 통로 클래스 주입)
+       ✅ 모달창 내 좌석 렌더링 로직 (통로 끊김 방지)
        =============================== */
     document.getElementById("modalBuilding").addEventListener("change", function() {
         const building = this.value;
@@ -530,7 +534,6 @@
         const layout = seatData[building];
         const cols = layout[0].length; 
         
-        // CSS Grid 열 세팅 (원본의 18열 유지)
         grid.style.gridTemplateColumns = `repeat(${cols}, 42px)`; 
         grid.innerHTML = ""; 
         
@@ -540,11 +543,12 @@
                 div.classList.add("seat-cell");
                 const cellText = cell.trim();
 
-                // ✅ 18열 배열 내에서 특정 인덱스(4번, 10번 열)를 굵은 회색 통로(aisle)로 강제 지정
-                if ((colIndex === 4 || colIndex === 10) && rowIndex > 1) {
+                // ✅ 끊김 없는 회색 통로 처리 (4번, 10번 열)
+                if ((colIndex === 4 || colIndex === 10) && rowIndex > 0 && rowIndex < 36) { 
+                    // rowIndex < 36 은 "출입문" 근처 가로 통로에서 선을 끊어주기 위함
                     div.classList.add("aisle");
                     grid.appendChild(div);
-                    return; // 통로인 경우 더 이상 처리하지 않고 넘어감
+                    return; 
                 }
 
                 if (cellText === "") {
@@ -553,13 +557,12 @@
                     div.classList.add("door");
                     div.innerHTML = "🚪<br>출입문";
                     div.style.gridColumn = "span 2"; 
-                } else if (cellText.includes("배치도") || cellText.includes("기둥")) {
-                    div.classList.add("text-only");
+                    div.style.gridRow = "span 4"; // 출입문을 세로로 길게 (선택사항)
+                    div.style.height = "100%";
+                } else if (cellText.includes("페이지")) {
+                    div.classList.add("text-only", "title-text");
                     div.textContent = cellText;
-                    if(cellText.includes("배치도")) {
-                        div.classList.add("title-text");
-                        div.style.gridColumn = "span 5"; 
-                    }
+                    div.style.gridColumn = "span 6"; // "1 페이지" 글자를 넓게 차지
                 } else {
                     div.classList.add("seat");
                     div.textContent = cellText;
