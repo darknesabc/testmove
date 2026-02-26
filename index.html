@@ -119,7 +119,17 @@
             box-shadow: 0 0 8px rgba(51, 102, 153, 0.6);
         }
 
-        /* 비활성화 좌석 스타일 */
+        /* 🚨 이미 예약된 좌석 스타일 (빨간색 & 취소선) */
+        .seat-cell.seat.reserved {
+            background-color: #ffeded;
+            color: #d9534f;
+            border-color: #ffcccc;
+            cursor: not-allowed;
+            pointer-events: none;
+            text-decoration: line-through;
+        }
+
+        /* 선택 불가능한 좌석(성별 다름) 시각적 비활성화 스타일 */
         .seat-cell.seat.disabled {
             background-color: #f2f2f2;
             color: #c0c0c0;
@@ -129,7 +139,7 @@
             pointer-events: none;
         }
 
-        /* 통로 */
+        /* 중앙 굵은 회색 통로 */
         .seat-cell.aisle {
             background-color: #7a7a7a; 
             border-radius: 0;
@@ -320,21 +330,28 @@
     <script>
     let moveList = [];
     let selectedTargetSeat = ""; 
+    
+    // ✅ 백엔드에서 받아올 데이터 변수
     let studentGenderMap = {};
+    let reservedSeatsList = []; // 🚨 이미 예약된 좌석을 저장할 배열
 
-    // 🚨 여기에 본인의 Apps Script 웹앱 URL을 잊지 말고 입력하세요!
+    // 🚨 본인의 Apps Script 웹앱 URL을 잊지 말고 입력하세요!
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYJ_wZv0U63C7_S44sNdzHJcSc5ftD1uNZOC-nNhL7Mm--NdV0ZZ6PRKjoW3m07vAs/exec";
 
     window.onload = function() {
-        console.log("구글 시트에서 성별 명렬표 데이터를 불러오는 중...");
+        console.log("구글 시트에서 명렬표 및 예약 현황 데이터를 불러오는 중...");
         const fetchUrl = SCRIPT_URL + "?action=getGenderMap&t=" + new Date().getTime();
         
         fetch(fetchUrl)
             .then(response => response.text())
             .then(text => {
                 try {
-                    studentGenderMap = JSON.parse(text); 
-                    console.log("명렬표 로드 완료! 총 " + Object.keys(studentGenderMap).length + "명의 데이터를 가져왔습니다.");
+                    const parsedData = JSON.parse(text); 
+                    // 🚨 백엔드에서 두 가지 데이터를 모두 꺼내옴
+                    studentGenderMap = parsedData.genderMap || {}; 
+                    reservedSeatsList = parsedData.reservedSeats || []; 
+                    
+                    console.log("명렬표 로드 완료! 명단:", Object.keys(studentGenderMap).length + "명 / 예약된 좌석:", reservedSeatsList.length + "개");
                 } catch (e) {
                     console.error("데이터 파싱 에러:", e);
                 }
@@ -547,15 +564,29 @@
                     div.textContent = cellText;
 
                     let isAllowed = true;
+                    let isAlreadyReserved = false;
+
+                    // 🚨 1. 남/여 구역 통제
                     if (reason === "심야자습 신청" || reason === "심야자습 취소") {
                         const targetNum = parseInt(cellText.slice(-2), 10);
                         if (gender === "남" && targetNum > 16) isAllowed = false;
                         if (gender === "여" && (targetNum < 21 || targetNum > 36)) isAllowed = false;
                     }
 
-                    if (!isAllowed) {
+                    // 🚨 2. 이미 예약된 좌석인지 확인 (신청할 때만 남의 자리를 막음)
+                    if (reason === "심야자습 신청" && reservedSeatsList.includes(cellText)) {
+                        isAllowed = false;
+                        isAlreadyReserved = true; // 예약되어서 막힌 상태임을 표시
+                    }
+
+                    if (isAlreadyReserved) {
+                        // 남이 이미 신청한 자리 스타일 (빨간색)
+                        div.classList.add("reserved");
+                    } else if (!isAllowed) {
+                        // 남/여 구역이 안 맞아서 클릭 안되는 자리 (회색)
                         div.classList.add("disabled");
                     } else {
+                        // 정상적으로 선택 가능한 자리
                         div.addEventListener("click", function() {
                             const prevSelected = grid.querySelector(".selected");
                             if (prevSelected) prevSelected.classList.remove("selected");
@@ -636,7 +667,6 @@
         } else {
             document.getElementById("errorMessage").style.display = "none";
             const originalSeatCombo = seatLetter + seatNum;
-            // 일반 제출일 경우 타겟 좌석은 빈 문자열("") 전송
             submitMoveData(building, originalSeatCombo, returnTime, reason, otherReason, score, "");
         }
     });
@@ -658,7 +688,6 @@
         const seatNum = document.getElementById("seatNumber2").value;
         const originalSeatCombo = seatLetter + seatNum;
         
-        // 🚨 본인의 원래 관/좌석을 유지한 채 타겟 좌석 정보를 추가 매개변수로 던집니다.
         submitMoveData(originalBuilding, originalSeatCombo, returnTime, reason, "", score, selectedTargetSeat);
         
         document.getElementById("popup").style.display = "none";
@@ -670,33 +699,36 @@
         document.getElementById("popupOverlay").style.display = "none";
     }
 
-    // 🚨 targetSeat 매개변수 추가 (심야자습일 때만 값이 들어옴)
     function submitMoveData(building, seatNumber, returnTime, reason, otherReason, score, targetSeat) {
         const now = new Date();
         const inputDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
         const inputTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
 
-        // 🚨 사유(reason)를 변질시키지 않고 순수하게 유지
         const cleanReason = reason === "기타" ? otherReason : reason;
 
         const moveData = {
-            building: building,         // 원래 관
-            seatNumber: seatNumber,     // 원래 좌석
+            building: building,
+            seatNumber: seatNumber,
             returnTime: returnTime,     
-            reason: cleanReason,        // 순수 사유 ("심야자습 신청" 등)
+            reason: cleanReason,
             score: ["입/퇴실 미준수","핸드폰 미제출","전자기기 무단사용","핸드폰 무단사용","무단이탈","타층/타관 무단출입","핸드폰/Wifi 무단반입","무단결석","원내대화","무단지각","취침강제하원","음식물섭취",].includes(reason) ? score : null,
             inputDate: inputDate,
             inputTime: inputTime,
-            targetSeat: targetSeat || "" // 새로 추가된 G열 타겟 데이터!
+            targetSeat: targetSeat || "" 
         };
 
-        // UI 표에 보여주기 위한 텍스트 (심야자습일 경우 "이동: 7-1B32" 표시)
         let displayReason = cleanReason;
         if (reason === "심야자습 신청" || reason === "심야자습 취소") {
             displayReason = `${cleanReason} ➡️ ${targetSeat}`;
+            
+            // 🚨 제출하는 즉시 화면 상의 예약 현황도 실시간으로 업데이트 (새로고침 전에도 바로 막히도록)
+            if (reason === "심야자습 신청") {
+                reservedSeatsList.push(targetSeat);
+            } else if (reason === "심야자습 취소") {
+                reservedSeatsList = reservedSeatsList.filter(seat => seat !== targetSeat);
+            }
         }
 
-        // 화면 하단 테이블(UI) 업데이트
         const tableData = { ...moveData, displayReason: displayReason };
         moveList.push(tableData);
         moveList.sort((a,b) => b.inputTime.localeCompare(a.inputTime));
@@ -709,16 +741,12 @@
 
         setReturnTimeOptionsForNightStudy(false);
 
-        // 구글 시트로 쏴주기
         fetch(SCRIPT_URL, {
             method: 'POST',
             body: JSON.stringify(moveData)
         }).catch(err => console.error("제출 에러:", err));
-        
-        // 제출 알림 팝업 완전히 제거!
     }
 
-    // 🚨 묻지 않고 바로 테이블 비우기!
     function resetTable() {
         moveList = [];
         refreshMoveList();
