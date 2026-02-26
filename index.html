@@ -119,14 +119,14 @@
             box-shadow: 0 0 8px rgba(51, 102, 153, 0.6);
         }
 
-        /* 🚨 [추가] 선택 불가능한 좌석(성별 다름) 스타일 */
+        /* 🚨 [추가] 선택 불가능한 좌석(성별 다름) 시각적 비활성화 스타일 */
         .seat-cell.seat.disabled {
             background-color: #f2f2f2;
             color: #c0c0c0;
             border-color: #e0e0e0;
             cursor: not-allowed;
             box-shadow: none;
-            pointer-events: none; /* 마우스 호버/클릭 원천 차단 */
+            pointer-events: none; /* 마우스 호버 및 클릭 완전 차단 */
         }
 
         /* 중앙 굵은 회색 통로 */
@@ -320,18 +320,30 @@
     <script>
     let moveList = [];
     let selectedTargetSeat = ""; 
+    
+    // ✅ 백엔드에서 명렬표 데이터를 받아와 저장할 빈 객체
+    let studentGenderMap = {};
 
-    // ✅ [명렬표 데이터] 성별 검증용
-    const studentGenderMap = {
-        "4-1A01": "여",
-        "7-1A01": "남",
-        "7-1B02": "남",
-        "7-1C15": "남",
-        "7-1A21": "여",
-        "7-1C34": "여",
-        "7-1F25": "여"
+    // 🚨 여기에 본인의 Apps Script 웹앱 URL을 입력하세요!
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYJ_wZv0U63C7_S44sNdzHJcSc5ftD1uNZOC-nNhL7Mm--NdV0ZZ6PRKjoW3m07vAs/exec";
+
+    // ✅ 화면이 열릴 때 자동으로 구글 시트에서 명렬표를 가져옵니다.
+    window.onload = function() {
+        console.log("구글 시트에서 성별 명렬표 데이터를 불러오는 중...");
+        
+        fetch(SCRIPT_URL + "?action=getGenderMap")
+            .then(response => response.json())
+            .then(data => {
+                studentGenderMap = data; // 백엔드에서 받아온 데이터로 지도 갱신!
+                console.log("명렬표 로드 완료! 총 " + Object.keys(studentGenderMap).length + "명의 데이터를 가져왔습니다.");
+            })
+            .catch(error => {
+                console.error("명렬표 로드 실패:", error);
+                alert("명렬표 데이터를 불러오는데 실패했습니다. 인터넷 연결 상태를 확인해주세요.");
+            });
     };
 
+    // ✅ [좌석표 데이터] 8칸 구조 (A, B, 통로, C, D, 통로, F, G)
     const seatData = {
         "7-1관": [
             ["7-1A01", "7-1B01", "", "7-1C01", "7-1D01", "", "7-1F01", "7-1G01"],
@@ -455,7 +467,7 @@
         setReturnTimeOptionsForNightStudy(isNightStudy);
 
         const scoreReasons = ["무단이탈","전자기기 무단사용","핸드폰/Wifi 무단반입","핸드폰 무단사용",
-            "무단결석","타층/타관 무단출입","원내대화","무단지각","취침강제하원","음식물섭취","입/퇴실 미준수","핸드폰 미제출"];
+            "무단결석","타층/타관 무단출입","원내대화","무단지각","취침강제하원","음식물섭취","입/퇴실 미준수","핸 পণ্ডিত 미제출"];
 
         document.getElementById("scoreDiv").style.display = scoreReasons.includes(value) ? "block" : "none";
 
@@ -475,7 +487,7 @@
     });
 
     /* ===============================
-       🚨 모달 렌더링 (사전 클릭 차단 로직 추가)
+       🚨 모달 렌더링 (사전 클릭 차단 및 시각적 비활성화 로직 추가)
        =============================== */
     document.getElementById("modalBuilding").addEventListener("change", function() {
         const building = this.value;
@@ -497,6 +509,8 @@
         const seatLetter = document.getElementById("seatNumber").value.trim();
         const seatNum = document.getElementById("seatNumber2").value.trim();
         const studentKey = `${originalBuilding}${seatLetter}${seatNum}`;
+        
+        // 동적으로 불러온 studentGenderMap 객체에서 성별 검색
         const gender = studentGenderMap[studentKey];
         const reason = document.getElementById("reason").value;
 
@@ -510,6 +524,7 @@
                 div.classList.add("seat-cell");
                 const cellText = cell.trim();
 
+                // 절대 좌표 설정
                 div.style.gridRow = (rowIndex + 1).toString();
                 div.style.gridColumn = (colIndex + 1).toString();
 
@@ -538,7 +553,7 @@
                     div.classList.add("seat");
                     div.textContent = cellText;
 
-                    // 🚨 본인 성별에 맞지 않는 좌석은 회색으로 비활성화
+                    // 🚨 본인 성별에 맞지 않는 좌석은 회색으로 비활성화하여 클릭을 막습니다.
                     let isAllowed = true;
                     if (reason === "심야자습 신청" || reason === "심야자습 취소") {
                         const targetNum = parseInt(cellText.slice(-2), 10);
@@ -594,12 +609,12 @@
                 return;
             }
 
-            // 🚨 명렬표 사전 검증: 미등록 학생은 모달창 자체를 열지 않음
+            // 🚨 명렬표 사전 검증: 구글 시트 데이터에 없는 학생은 모달창 열기를 거부함
             const cleanBuilding = building.replace("관", "").trim(); 
             const studentKey = `${cleanBuilding}${seatLetter.trim()}${seatNum.trim()}`; 
             
             if (!studentGenderMap[studentKey]) {
-                alert(`[${studentKey}] 좌석은 성별 명렬표에 등록되지 않았습니다.\n코드 상단의 studentGenderMap에 해당 좌석을 추가해주세요.`);
+                alert(`[${studentKey}] 좌석은 성별 명렬표에 등록되지 않았습니다.\n관리자에게 문의해주세요.`);
                 return;
             }
 
@@ -653,8 +668,6 @@
         const seatNum = document.getElementById("seatNumber2").value;
         const originalSeatCombo = seatLetter + seatNum;
         const originalSeatInfo = `(원래좌석: ${originalBuilding} ${originalSeatCombo})`;
-
-        // (사전 클릭 차단을 적용했으므로, 여기서 추가로 튕겨내는 알림은 뺐습니다.)
         
         submitMoveData(targetBuilding, selectedTargetSeat, returnTime, reason, originalSeatInfo, score);
         
@@ -697,19 +710,20 @@
 
         setReturnTimeOptionsForNightStudy(false);
 
-        fetch('https://script.google.com/macros/s/AKfycbyYJ_wZv0U63C7_S44sNdzHJcSc5ftD1uNZOC-nNhL7Mm--NdV0ZZ6PRKjoW3m07vAs/exec', {
+        fetch(SCRIPT_URL, {
             method: 'POST',
             body: JSON.stringify(moveData)
-        });
+        }).catch(err => console.error("제출 에러:", err));
         
-           }
+        alert("성공적으로 제출되었습니다.");
+    }
 
     function resetTable() {
-        moveList = [];
+        if(confirm("기록된 테이블을 초기화하시겠습니까?")) {
+            moveList = [];
             refreshMoveList();
         }
     }
     </script>
 </body>
 </html>
-
