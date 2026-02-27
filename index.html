@@ -242,11 +242,10 @@
     <script>
     let moveList = [];
     let selectedTargetSeat = ""; 
-    
     let studentGenderMap = {};
     let userReservations = {}; 
 
-    // 🚨 본인의 웹앱 URL을 입력하세요!
+    // 🚨 본인의 앱스 스크립트 웹앱 주소를 입력하세요!
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYJ_wZv0U63C7_S44sNdzHJcSc5ftD1uNZOC-nNhL7Mm--NdV0ZZ6PRKjoW3m07vAs/exec";
 
     window.onload = function() {
@@ -279,7 +278,7 @@
             ["7-1A07", "7-1B07", "", "7-1C07", "7-1D07", "", "7-1F07", "7-1G07"],
             ["7-1A08", "7-1B08", "", "7-1C08", "7-1D08", "", "7-1F08", ""],
             ["7-1A09", "7-1B09", "", "7-1C09", "7-1D09", "", "7-1F09", ""],
-            ["7-1A10", "7-1B10", "", "7-1C10", "7-1D10", "", "7-1F10", ""],
+            ["7-1A10", "7-1B10", "", "7-1C10", "7-1D10", "", "7-1F010", ""],
             ["7-1A11", "7-1B11", "", "7-1C11", "7-1D11", "", "7-1F11", ""],
             ["7-1A12", "7-1B12", "", "7-1C12", "7-1D12", "", "7-1F12", ""],
             ["7-1A13", "7-1B13", "", "7-1C13", "7-1D13", "", "7-1F13", ""],
@@ -333,22 +332,18 @@
     }
     document.getElementById("alertPopupOkButton").addEventListener("click", closeCenterAlert);
 
-    // 🚨 복귀교시 옵션을 동적으로 변경하는 로직
     const returnTimeSelect = document.getElementById("returnTime");
     
     function setReturnTimeOptionsForNightStudy(isNightStudy) {
-        // 이전에 선택된 값을 기억
         const prev = returnTimeSelect.value;
         
         if (isNightStudy) {
-            // 심야자습 관련 사유를 선택했을 때 (9, 10교시, 복귀안함)
             returnTimeSelect.innerHTML = `
                 <option value="">선택하세요</option>
                 <option value="9">9교시</option>
                 <option value="10">10교시</option>
             `;
         } else {
-            // 일반 사유를 선택했을 때 (1~8교시, 복귀안함)
             returnTimeSelect.innerHTML = `
                 <option value="">선택하세요</option>
                 <option value="1">1교시</option>
@@ -363,7 +358,6 @@
             `;
         }
         
-        // 새로 바뀐 옵션 목록에 이전 선택값이 존재한다면 유지, 아니면 초기화
         if ([...returnTimeSelect.options].some(o => o.value === prev)) {
             returnTimeSelect.value = prev;
         } else {
@@ -399,7 +393,6 @@
         const value = this.value;
         const isNightStudy = (value === "심야자습 신청" || value === "심야자습 취소");
         
-        // 이유가 바뀔 때마다 복귀교시 목록을 업데이트
         setReturnTimeOptionsForNightStudy(isNightStudy);
 
         const scoreReasons = ["무단이탈","전자기기 무단사용","핸드폰/Wifi 무단반입","핸드폰 무단사용",
@@ -547,8 +540,8 @@
                 showCenterAlert("토요일,일요일 및 지정된 날짜에는 심야자습 신청/취소가 불가능합니다.");
                 return;
             }
-            if (!["9","10","복귀안함"].includes(returnTime)) {
-                showCenterAlert("심야자습 신청/취소는 복귀교시를 9교시 또는 10교시(또는 복귀안함)만 선택할 수 있습니다.");
+            if (!["9","10"].includes(returnTime)) {
+                showCenterAlert("심야자습 신청/취소는 복귀교시를 9교시 또는 10교시만 선택할 수 있습니다.");
                 return;
             }
             if (!building || !seatLetter || !seatNum || !returnTime) {
@@ -590,11 +583,8 @@
             const popupSubmitButton = document.getElementById("popupSubmitButton");
             const popupCancelButton = document.getElementById("popupCancelButton");
 
-            popupSubmitButton.removeEventListener("click", handlePopupSubmit);
-            popupSubmitButton.addEventListener("click", handlePopupSubmit);
-
-            popupCancelButton.removeEventListener("click", handlePopupCancel);
-            popupCancelButton.addEventListener("click", handlePopupCancel);
+            popupSubmitButton.onclick = handlePopupSubmit;
+            popupCancelButton.onclick = handlePopupCancel;
 
         } else if (reason === "기타" && !otherReason.trim()) {
             document.getElementById("errorMessage").style.display = "block";
@@ -607,6 +597,7 @@
         }
     });
 
+    // 🚨 수정된 제출 핸들러: 최종 확인 팝업 추가
     function handlePopupSubmit() {
         const targetBuilding = document.getElementById("modalBuilding").value;
 
@@ -623,11 +614,20 @@
         const seatLetter = document.getElementById("seatNumber").value;
         const seatNum = document.getElementById("seatNumber2").value;
         const originalSeatCombo = seatLetter + seatNum;
-        
-        submitMoveData(originalBuilding, originalSeatCombo, returnTime, reason, "", score, selectedTargetSeat);
-        
-        document.getElementById("popup").style.display = "none";
-        document.getElementById("popupOverlay").style.display = "none";
+
+        // ✅ 최종 확인용 메시지 박스
+        const confirmMessage = `[${reason} 최종 확인]\n\n` +
+                               `본인 좌석: ${originalBuilding} ${originalSeatCombo}\n` +
+                               `이동 좌석: ${selectedTargetSeat}\n` +
+                               `이용 교시: ${returnTime}교시\n\n` +
+                               `위 내용이 정확합니까? [확인] 클릭 시 제출됩니다.`;
+
+        if (confirm(confirmMessage)) {
+            submitMoveData(originalBuilding, originalSeatCombo, returnTime, reason, "", score, selectedTargetSeat);
+            
+            document.getElementById("popup").style.display = "none";
+            document.getElementById("popupOverlay").style.display = "none";
+        }
     }
 
     function handlePopupCancel() {
@@ -667,8 +667,7 @@
         }
 
         const tableData = { ...moveData, displayReason: displayReason };
-        moveList.push(tableData);
-        moveList.sort((a,b) => b.inputTime.localeCompare(a.inputTime));
+        moveList.unshift(tableData); 
         refreshMoveList();
 
         document.getElementById("moveForm").reset();
@@ -676,7 +675,6 @@
         document.getElementById("otherReason").style.display = "none";
         document.getElementById("otherReasonLabel").style.display = "none";
         
-        // 폼 리셋 후에는 일반 사유 기준(1~8교시)으로 복귀교시 옵션 원상복구
         setReturnTimeOptionsForNightStudy(false);
 
         fetch(SCRIPT_URL, {
@@ -692,4 +690,3 @@
     </script>
 </body>
 </html>
-
