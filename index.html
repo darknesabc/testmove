@@ -36,10 +36,9 @@
         thead { background-color: #336699; color: white; font-weight: bold; }
         tbody tr:nth-child(even) { background-color: #f9f9f9; }
         tbody tr:hover { background-color: #f1f5f9; }
-        
         .score { display: none; }
 
-        /* 팝업 스타일 */
+        /* 팝업 공통 스타일 */
         .popup {
             display: none; position: fixed; top: 50%; left: 50%;
             transform: translate(-50%, -50%); width: 95%; max-width: 850px; 
@@ -57,10 +56,12 @@
         .cancel-btn { background-color: #aaa !important; }
         .cancel-btn:hover { background-color: #888 !important; }
 
+        /* 최종 확인 팝업 디자인 */
         #finalConfirmPopup { max-width: 400px; z-index: 1100; border-top: 5px solid #336699; }
         .confirm-info-box { text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #eee; }
         .confirm-info-box p { margin: 8px 0; font-size: 15px; }
 
+        /* 좌석표 스타일 */
         .seat-map-container {
             width: 100%; max-height: 480px; overflow: auto; 
             margin-top: 15px; border: 1px solid #e0e0e0; padding: 20px;
@@ -181,7 +182,7 @@
             <h2 id="popupTitle">🌙 심야자습 좌석 선택</h2>
             <p style="font-size: 14px; color: #555; margin-bottom: 15px;">
                 본인 좌석: <span id="popupOriginalSeat" style="font-weight:bold; color:#336699;"></span> &nbsp;|&nbsp;
-                이용교시: <span id="popupReturnTime" style="font-weight:bold;"></span>
+                희망교시: <span id="popupReturnTime" style="font-weight:bold;"></span>
             </p>
             <div style="background-color: #f1f5f9; padding: 15px; border-radius: 8px; text-align: left; margin-bottom: 15px;">
                 <label for="modalBuilding" style="display:inline-block; width: auto; margin:0 10px 0 0;">📌 이동할 관 선택:</label>
@@ -230,7 +231,7 @@
     let studentGenderMap = {};
     let userReservations = {}; 
 
-    // 🚨 본인의 웹앱 주소를 입력하세요!
+    // 🚨 본인의 앱스 스크립트 웹앱 주소로 수정하세요!
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYJ_wZv0U63C7_S44sNdzHJcSc5ftD1uNZOC-nNhL7Mm--NdV0ZZ6PRKjoW3m07vAs/exec";
 
     window.onload = function() {
@@ -240,10 +241,10 @@
                 const parsedData = JSON.parse(text); 
                 studentGenderMap = parsedData.genderMap || {}; 
                 userReservations = parsedData.userReservations || {}; 
-                console.log("로드 완료");
-                setReturnTimeOptionsForNightStudy(false); // 초기화
-            } catch (e) { console.error("에러"); }
-        }).catch(err => console.error("에러"));
+                console.log("데이터 연동 성공");
+                setReturnTimeOptionsForNightStudy(false);
+            } catch (e) { console.error("파싱 오류"); }
+        }).catch(err => console.error("통신 오류"));
     };
 
     const seatData = {
@@ -316,14 +317,19 @@
         const ret = document.getElementById("returnTime").value; const reas = document.getElementById("reason").value;
         if (reas.includes("심야자습")) {
             const cleanB = b.replace("관", "").trim(); const key = `${cleanB}${s1}${s2}`;
-            if (!studentGenderMap[key]) { alert("등록되지 않은 학생입니다."); return; }
-            if (reas === "심야자습 신청" && userReservations[key]) { alert(`이미 신청됨 (${userReservations[key]})`); return; }
-            if (reas === "심야자습 취소" && !userReservations[key]) { alert("신청 내역 없음"); return; }
+            if (!studentGenderMap[key]) { alert("등록되지 않은 좌석입니다."); return; }
+            if (reas === "심야자습 신청" && userReservations[key]) { alert(`이미 자리를 신청하셨습니다. (${userReservations[key]})`); return; }
+            if (reas === "심야자습 취소" && !userReservations[key]) { alert("신청 내역이 없습니다."); return; }
+            if (!ret) { alert("복귀 교시를 선택해주세요."); return; }
+
+            document.getElementById("popupTitle").textContent = reas;
             document.getElementById("popupOriginalSeat").textContent = `${b} ${s1}${s2}`;
             document.getElementById("popupReturnTime").textContent = ret + "교시";
-            document.getElementById("popupReason").textContent = reas;
-            document.getElementById("modalBuilding").value = ""; document.getElementById("seatMapContainer").style.display = "none";
-            document.getElementById("popupOverlay").style.display = "block"; document.getElementById("popup").style.display = "block";
+            document.getElementById("modalBuilding").value = ""; 
+            document.getElementById("seatMapContainer").style.display = "none";
+            document.getElementById("selectedTargetText").textContent = "관을 선택해주세요.";
+            document.getElementById("popupOverlay").style.display = "block"; 
+            document.getElementById("popup").style.display = "block";
         } else {
             submitMoveData(b, s1+s2, ret, reas, document.getElementById("otherReason").value, parseInt(document.getElementById("score").value)||null, "");
         }
@@ -344,6 +350,7 @@
         submitMoveData(b, s, document.getElementById("returnTime").value, document.getElementById("reason").value, "", parseInt(document.getElementById("score").value)||null, selectedTargetSeat);
         document.getElementById("finalConfirmPopup").style.display = "none"; document.getElementById("popupOverlay").style.display = "none";
     };
+
     document.getElementById("finalNoButton").onclick = function() { document.getElementById("finalConfirmPopup").style.display = "none"; document.getElementById("popup").style.display = "block"; };
     document.getElementById("popupSubmitButton").onclick = handlePopupSubmit;
     document.getElementById("popupCancelButton").onclick = function() { document.getElementById("popup").style.display = "none"; document.getElementById("popupOverlay").style.display = "none"; };
@@ -362,7 +369,7 @@
         moveList.unshift(tableData); refreshMoveList();
         document.getElementById("moveForm").reset(); document.getElementById("scoreDiv").style.display = "none"; document.getElementById("otherReason").style.display = "none";
         setReturnTimeOptionsForNightStudy(false);
-        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) }).catch(err => console.error("에러"));
+        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) }).catch(err => console.error("전송 에러"));
     }
 
     function refreshMoveList() {
