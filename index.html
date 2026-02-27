@@ -36,14 +36,10 @@
         thead { background-color: #336699; color: white; font-weight: bold; }
         tbody tr:nth-child(even) { background-color: #f9f9f9; }
         tbody tr:hover { background-color: #f1f5f9; }
-        .error {
-            color: red; margin-top: 10px; position: fixed; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); background-color: rgba(255, 255, 255, 0.95);
-            padding: 20px; border-radius: 8px; box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-            font-size: 16px; display: none; z-index: 2000;
-        }
+        
         .score { display: none; }
 
+        /* 팝업 스타일 */
         .popup {
             display: none; position: fixed; top: 50%; left: 50%;
             transform: translate(-50%, -50%); width: 95%; max-width: 850px; 
@@ -58,42 +54,31 @@
         .popup h2 { margin-top: 0; margin-bottom: 10px; color: #336699; }
         .popup-buttons { margin-top: 20px; display: flex; justify-content: center; gap: 10px; }
         .popup button { width: auto; min-width: 100px; }
-        .popup button#popupCancelButton { background-color: #aaa; }
-        .popup button#popupCancelButton:hover { background-color: #888; }
-        #alertPopup .popup-buttons button { margin: 0; }
+        .cancel-btn { background-color: #aaa !important; }
+        .cancel-btn:hover { background-color: #888 !important; }
+
+        #finalConfirmPopup { max-width: 400px; z-index: 1100; border-top: 5px solid #336699; }
+        .confirm-info-box { text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #eee; }
+        .confirm-info-box p { margin: 8px 0; font-size: 15px; }
 
         .seat-map-container {
             width: 100%; max-height: 480px; overflow: auto; 
             margin-top: 15px; border: 1px solid #e0e0e0; padding: 20px;
             background: #f8f9fa; border-radius: 8px; display: none; box-sizing: border-box;
         }
-
         .seat-grid { display: grid; gap: 2px 4px; justify-content: center; width: max-content; margin: 0 auto; }
-        
-        .seat-cell {
-            height: 24px; font-size: 11px; text-align: center; display: flex;
-            align-items: center; justify-content: center; user-select: none;
-            box-sizing: border-box; border-radius: 3px; transition: transform 0.1s, box-shadow 0.1s;
-        }
-        
+        .seat-cell { height: 24px; font-size: 11px; text-align: center; display: flex; align-items: center; justify-content: center; user-select: none; box-sizing: border-box; border-radius: 3px; transition: transform 0.1s, box-shadow 0.1s; }
         .seat-cell.seat { background-color: #ffffff; border: 1px solid #b3bccc; cursor: pointer; color: #333; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .seat-cell.seat:hover { background-color: #e3effa; border-color: #336699; transform: translateY(-1px); }
         .seat-cell.seat.selected { background-color: #336699; color: white; border-color: #1a3a5c; box-shadow: 0 0 8px rgba(51, 102, 153, 0.6); }
-
         .seat-cell.seat.reserved { background-color: #ffeded; color: #d9534f; border-color: #ffcccc; cursor: not-allowed; pointer-events: none; text-decoration: line-through; }
         .seat-cell.seat.disabled { background-color: #f2f2f2; color: #c0c0c0; border-color: #e0e0e0; cursor: not-allowed; box-shadow: none; pointer-events: none; }
-
         .seat-cell.aisle { background-color: #7a7a7a; border-radius: 0; border: none; width: 100%; height: 100%; transform: scaleY(1.2); z-index: 1; pointer-events: none; }
         .seat-cell.empty { background-color: transparent; border: none; padding: 0; pointer-events: none; }
         .seat-cell.title-text { color: #336699; font-size: 18px; font-weight: 900; letter-spacing: 2px; justify-content: center; }
         .seat-cell.door { background-color: #e2f0d9; color: #274e13; border: 1px dashed #93c47d; border-radius: 4px; justify-content: center; font-weight: bold; font-size: 11px; }
 
-        @media (max-width: 768px) {
-            form { padding: 15px; }
-            button { width: 100%; }
-            table, th, td { font-size: 14px; }
-            select, textarea { padding: 14px; font-size: 16px; }
-        }
+        @media (max-width: 768px) { form { padding: 15px; } button { width: 100%; } table, th, td { font-size: 14px; } select, textarea { padding: 14px; font-size: 16px; } }
     </style>
 </head>
 <body>
@@ -134,15 +119,6 @@
         </div>
         <div style="margin-bottom: 15px;"></div>
 
-        <label for="returnTime">복귀교시:</label>
-        <select id="returnTime" required>
-            <option value="">선택하세요</option>
-            <option value="1">1교시</option><option value="2">2교시</option><option value="3">3교시</option>
-            <option value="4">4교시</option><option value="5">5교시</option><option value="6">6교시</option>
-            <option value="7">7교시</option><option value="8">8교시</option>
-            <option value="복귀안함">복귀안함</option>
-        </select>
-
         <label for="reason">이동사유:</label>
         <select id="reason" required>
             <option value="">선택하세요</option>
@@ -167,6 +143,11 @@
             </optgroup>
         </select>
 
+        <label for="returnTime">복귀교시:</label>
+        <select id="returnTime" required>
+            <option value="">사유를 먼저 선택하세요</option>
+        </select>
+
         <div id="scoreDiv" class="score">
             <label for="score">점수 (1~10점):</label>
             <select id="score">
@@ -176,9 +157,8 @@
                 <option value="10">10점</option>
             </select>
         </div>
-
         <label for="otherReason" id="otherReasonLabel" style="display:none;">기타 사유:</label>
-        <textarea id="otherReason" placeholder="기타 사유를 입력하세요" style="display:none; height: 80px;"></textarea>
+        <textarea id="otherReason" placeholder="내용을 입력하세요" style="display:none; height: 80px;"></textarea>
 
         <button type="submit">제출</button>
     </form>
@@ -194,19 +174,15 @@
         </table>
     </div>
 
-    <div class="error" id="errorMessage">기타 사유를 입력해주세요.</div>
-
     <div id="popupOverlay" class="popup-overlay"></div>
 
     <div id="popup" class="popup">
         <div class="popup-content">
-            <h2 id="popupTitle">🌙 심야자습 타겟 좌석 선택</h2>
+            <h2 id="popupTitle">🌙 심야자습 좌석 선택</h2>
             <p style="font-size: 14px; color: #555; margin-bottom: 15px;">
                 본인 좌석: <span id="popupOriginalSeat" style="font-weight:bold; color:#336699;"></span> &nbsp;|&nbsp;
-                희망교시: <span id="popupReturnTime" style="font-weight:bold;"></span> &nbsp;|&nbsp;
-                사유: <span id="popupReason" style="font-weight:bold;"></span>
+                이용교시: <span id="popupReturnTime" style="font-weight:bold;"></span>
             </p>
-            
             <div style="background-color: #f1f5f9; padding: 15px; border-radius: 8px; text-align: left; margin-bottom: 15px;">
                 <label for="modalBuilding" style="display:inline-block; width: auto; margin:0 10px 0 0;">📌 이동할 관 선택:</label>
                 <select id="modalBuilding" required style="width: 200px; padding: 8px; margin: 0; display: inline-block;">
@@ -217,25 +193,34 @@
                 </select>
                 <span id="selectedTargetText" style="margin-left: 15px; font-weight:bold; color:#d9534f;">관을 선택해주세요.</span>
             </div>
-
-            <div id="seatMapContainer" class="seat-map-container">
-                <div id="seatGrid" class="seat-grid"></div>
-            </div>
-            
+            <div id="seatMapContainer" class="seat-map-container"><div id="seatGrid" class="seat-grid"></div></div>
             <div class="popup-buttons">
                 <button id="popupSubmitButton">최종 제출</button>
-                <button id="popupCancelButton">취소</button>
+                <button id="popupCancelButton" class="cancel-btn">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="finalConfirmPopup" class="popup">
+        <div class="popup-content">
+            <h2 id="confirmReasonTitle">📝 최종 확인</h2>
+            <div class="confirm-info-box">
+                <p>📍 <b>본인 좌석:</b> <span id="c_origSeat"></span></p>
+                <p>🚀 <b>이동 좌석:</b> <span id="c_targetSeat"></span></p>
+                <p>⏰ <b>이용 교시:</b> <span id="c_returnTime"></span></p>
+            </div>
+            <p style="color:#d9534f; font-weight:bold;">위 내용이 정확합니까?</p>
+            <div class="popup-buttons">
+                <button id="finalYesButton" style="background-color: #274e13;">네, 신청합니다</button>
+                <button id="finalNoButton" class="cancel-btn">아니오</button>
             </div>
         </div>
     </div>
 
     <div id="alertPopup" class="popup" style="max-width: 400px; z-index: 2000;">
         <div class="popup-content">
-            <h2>안내</h2>
-            <p id="alertPopupMessage" style="line-height:1.6; margin: 20px 0;"></p>
-            <div class="popup-buttons">
-                <button id="alertPopupOkButton">확인</button>
-            </div>
+            <h2>안내</h2><p id="alertPopupMessage" style="line-height:1.6; margin: 20px 0;"></p>
+            <div class="popup-buttons"><button id="alertPopupOkButton">확인</button></div>
         </div>
     </div>
 
@@ -245,448 +230,146 @@
     let studentGenderMap = {};
     let userReservations = {}; 
 
-    // 🚨 본인의 앱스 스크립트 웹앱 주소를 입력하세요!
+    // 🚨 본인의 웹앱 주소를 입력하세요!
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYJ_wZv0U63C7_S44sNdzHJcSc5ftD1uNZOC-nNhL7Mm--NdV0ZZ6PRKjoW3m07vAs/exec";
 
     window.onload = function() {
-        console.log("구글 시트에서 명렬표 및 예약 현황을 불러오는 중...");
         const fetchUrl = SCRIPT_URL + "?action=getGenderMap&t=" + new Date().getTime();
-        
-        fetch(fetchUrl)
-            .then(response => response.text())
-            .then(text => {
-                try {
-                    const parsedData = JSON.parse(text); 
-                    studentGenderMap = parsedData.genderMap || {}; 
-                    userReservations = parsedData.userReservations || {}; 
-                    console.log("명렬표 로드 완료! 예약된 총 좌석:", Object.keys(userReservations).length + "개");
-                } catch (e) {
-                    console.error("데이터 파싱 에러:", e);
-                }
-            })
-            .catch(error => console.error("서버 통신 차단됨:", error));
+        fetch(fetchUrl).then(response => response.text()).then(text => {
+            try {
+                const parsedData = JSON.parse(text); 
+                studentGenderMap = parsedData.genderMap || {}; 
+                userReservations = parsedData.userReservations || {}; 
+                console.log("로드 완료");
+                setReturnTimeOptionsForNightStudy(false); // 초기화
+            } catch (e) { console.error("에러"); }
+        }).catch(err => console.error("에러"));
     };
 
     const seatData = {
         "7-1관": [
-            ["7-1A01", "7-1B01", "", "7-1C01", "7-1D01", "", "7-1F01", "7-1G01"],
-            ["7-1A02", "7-1B02", "", "7-1C02", "7-1D02", "", "7-1F02", "7-1G02"],
-            ["7-1A03", "7-1B03", "", "7-1C03", "7-1D03", "", "7-1F03", "7-1G03"],
-            ["7-1A04", "7-1B04", "", "7-1C04", "7-1D04", "", "7-1F04", "7-1G04"],
-            ["7-1A05", "7-1B05", "", "7-1C05", "7-1D05", "", "7-1F05", "7-1G05"],
-            ["7-1A06", "7-1B06", "", "7-1C06", "7-1D06", "", "7-1F06", "7-1G06"],
-            ["7-1A07", "7-1B07", "", "7-1C07", "7-1D07", "", "7-1F07", "7-1G07"],
-            ["7-1A08", "7-1B08", "", "7-1C08", "7-1D08", "", "7-1F08", ""],
-            ["7-1A09", "7-1B09", "", "7-1C09", "7-1D09", "", "7-1F09", ""],
-            ["7-1A10", "7-1B10", "", "7-1C10", "7-1D10", "", "7-1F010", ""],
-            ["7-1A11", "7-1B11", "", "7-1C11", "7-1D11", "", "7-1F11", ""],
-            ["7-1A12", "7-1B12", "", "7-1C12", "7-1D12", "", "7-1F12", ""],
-            ["7-1A13", "7-1B13", "", "7-1C13", "7-1D13", "", "7-1F13", ""],
-            ["",       "7-1B14", "", "7-1C14", "7-1D14", "", "7-1F14", ""],
-            ["",       "7-1B15", "", "7-1C15", "7-1D15", "", "7-1F15", ""],
-            ["",       "",       "", "7-1C16", "7-1D16", "", "7-1F16", ""],
-            ["", "", "", "", "", "", "", ""], 
-            ["1 페이지", "", "", "", "", "", "", ""],
-            ["", "", "", "", "", "", "", "출입문"],
-            ["", "", "", "", "", "", "", ""],
-            ["",       "",       "", "7-1C34", "7-1D34", "", "7-1F34", "7-1G34"], 
-            ["",       "",       "", "7-1C33", "7-1D33", "", "7-1F33", "7-1G33"], 
-            ["",       "7-1B32", "", "7-1C32", "7-1D32", "", "7-1F32", "7-1G32"], 
-            ["",       "7-1B31", "", "7-1C31", "7-1D31", "", "7-1F31", "7-1G31"], 
-            ["",       "7-1B30", "", "7-1C30", "7-1D30", "", "7-1F30", "7-1G30"], 
-            ["7-1A29", "7-1B29", "", "7-1C29", "7-1D29", "", "7-1F29", "7-1G29"], 
-            ["7-1A28", "7-1B28", "", "7-1C28", "7-1D28", "", "7-1F28", "7-1G28"],
-            ["7-1A27", "7-1B27", "", "7-1C27", "7-1D27", "", "7-1F27", "7-1G27"],
-            ["7-1A26", "7-1B26", "", "7-1C26", "7-1D26", "", "7-1F26", "7-1G26"],
-            ["7-1A25", "7-1B25", "", "7-1C25", "7-1D25", "", "7-1F25", "7-1G25"],
-            ["7-1A24", "7-1B24", "", "7-1C24", "7-1D24", "", "7-1F24", "7-1G24"],
-            ["7-1A23", "7-1B23", "", "7-1C23", "7-1D23", "", "7-1F23", "7-1G23"],
-            ["7-1A22", "7-1B22", "", "7-1C22", "7-1D22", "", "7-1F22", "7-1G22"],
-            ["7-1A21", "7-1B21", "", "7-1C21", "7-1D21", "", "7-1F21", "7-1G21"]
+            ["7-1A01", "7-1B01", "", "7-1C01", "7-1D01", "", "7-1F01", "7-1G01"], ["7-1A02", "7-1B02", "", "7-1C02", "7-1D02", "", "7-1F02", "7-1G02"], ["7-1A03", "7-1B03", "", "7-1C03", "7-1D03", "", "7-1F03", "7-1G03"], ["7-1A04", "7-1B04", "", "7-1C04", "7-1D04", "", "7-1F04", "7-1G04"], ["7-1A05", "7-1B05", "", "7-1C05", "7-1D05", "", "7-1F05", "7-1G05"], ["7-1A06", "7-1B06", "", "7-1C06", "7-1D06", "", "7-1F06", "7-1G06"], ["7-1A07", "7-1B07", "", "7-1C07", "7-1D07", "", "7-1F07", "7-1G07"], ["7-1A08", "7-1B08", "", "7-1C08", "7-1D08", "", "7-1F08", ""], ["7-1A09", "7-1B09", "", "7-1C09", "7-1D09", "", "7-1F09", ""], ["7-1A10", "7-1B10", "", "7-1C10", "7-1D10", "", "7-1F10", ""], ["7-1A11", "7-1B11", "", "7-1C11", "7-1D11", "", "7-1F11", ""], ["7-1A12", "7-1B12", "", "7-1C12", "7-1D12", "", "7-1F12", ""], ["7-1A13", "7-1B13", "", "7-1C13", "7-1D13", "", "7-1F13", ""], ["", "7-1B14", "", "7-1C14", "7-1D14", "", "7-1F14", ""], ["", "7-1B15", "", "7-1C15", "7-1D15", "", "7-1F15", ""], ["", "", "", "7-1C16", "7-1D16", "", "7-1F16", ""], ["", "", "", "", "", "", "", ""], ["1 페이지", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "출입문"], ["", "", "", "", "", "", "", ""], ["", "", "", "7-1C34", "7-1D34", "", "7-1F34", "7-1G34"], ["", "", "", "7-1C33", "7-1D33", "", "7-1F33", "7-1G33"], ["", "7-1B32", "", "7-1C32", "7-1D32", "", "7-1F32", "7-1G32"], ["", "7-1B31", "", "7-1C31", "7-1D31", "", "7-1F31", "7-1G31"], ["", "7-1B30", "", "7-1C30", "7-1D30", "", "7-1F30", "7-1G30"], ["7-1A29", "7-1B29", "", "7-1C29", "7-1D29", "", "7-1F29", "7-1G29"], ["7-1A28", "7-1B28", "", "7-1C28", "7-1D28", "", "7-1F28", "7-1G28"], ["7-1A27", "7-1B27", "", "7-1C27", "7-1D27", "", "7-1F27", "7-1G27"], ["7-1A26", "7-1B26", "", "7-1C26", "7-1D26", "", "7-1F26", "7-1G26"], ["7-1A25", "7-1B25", "", "7-1C25", "7-1D25", "", "7-1F25", "7-1G25"], ["7-1A24", "7-1B24", "", "7-1C24", "7-1D24", "", "7-1F24", "7-1G24"], ["7-1A23", "7-1B23", "", "7-1C23", "7-1D23", "", "7-1F23", "7-1G23"], ["7-1A22", "7-1B22", "", "7-1C22", "7-1D22", "", "7-1F22", "7-1G22"], ["7-1A21", "7-1B21", "", "7-1C21", "7-1D21", "", "7-1F21", "7-1G21"]
         ]
     };
 
     const nightStudyBlockedDates = new Set(["2026-01-31", "2026-02-01", "2026-03-01"]);
-
-    function getKSTDateString(date = new Date()) {
-        return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(date);
-    }
-    function isNightStudyBlocked() {
-        const nowKST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-        const day = nowKST.getDay();
-        const today = getKSTDateString(nowKST);
-        if (day === 0 || day === 6) return true;
-        if (nightStudyBlockedDates.has(today)) return true;
-        return false;
-    }
-    function showCenterAlert(message) {
-        document.getElementById("alertPopupMessage").textContent = message;
-        document.getElementById("alertPopup").style.display = "block";
-        document.getElementById("popupOverlay").style.display = "block";
-    }
-    function closeCenterAlert() {
-        document.getElementById("alertPopup").style.display = "none";
-        if(document.getElementById("popup").style.display !== "block") {
-            document.getElementById("popupOverlay").style.display = "none";
-        }
-    }
-    document.getElementById("alertPopupOkButton").addEventListener("click", closeCenterAlert);
+    function getKSTDateString(date = new Date()) { return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(date); }
+    function isNightStudyBlocked() { const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })); const day = now.getDay(); const today = getKSTDateString(now); return (day === 0 || day === 6 || nightStudyBlockedDates.has(today)); }
+    function showCenterAlert(message) { document.getElementById("alertPopupMessage").textContent = message; document.getElementById("alertPopup").style.display = "block"; document.getElementById("popupOverlay").style.display = "block"; }
+    function closeCenterAlert() { document.getElementById("alertPopup").style.display = "none"; if(document.getElementById("popup").style.display !== "block" && document.getElementById("finalConfirmPopup").style.display !== "block") document.getElementById("popupOverlay").style.display = "none"; }
+    document.getElementById("alertPopupOkButton").onclick = closeCenterAlert;
 
     const returnTimeSelect = document.getElementById("returnTime");
-    
     function setReturnTimeOptionsForNightStudy(isNightStudy) {
         const prev = returnTimeSelect.value;
-        
-        if (isNightStudy) {
-            returnTimeSelect.innerHTML = `
-                <option value="">선택하세요</option>
-                <option value="9">9교시</option>
-                <option value="10">10교시</option>
-            `;
-        } else {
-            returnTimeSelect.innerHTML = `
-                <option value="">선택하세요</option>
-                <option value="1">1교시</option>
-                <option value="2">2교시</option>
-                <option value="3">3교시</option>
-                <option value="4">4교시</option>
-                <option value="5">5교시</option>
-                <option value="6">6교시</option>
-                <option value="7">7교시</option>
-                <option value="8">8교시</option>
-                <option value="복귀안함">복귀안함</option>
-            `;
-        }
-        
-        if ([...returnTimeSelect.options].some(o => o.value === prev)) {
-            returnTimeSelect.value = prev;
-        } else {
-            returnTimeSelect.value = "";
-        }
+        if (isNightStudy) returnTimeSelect.innerHTML = `<option value="">선택하세요</option><option value="9">9교시</option><option value="10">10교시</option>`;
+        else returnTimeSelect.innerHTML = `<option value="">선택하세요</option><option value="1">1교시</option><option value="2">2교시</option><option value="3">3교시</option><option value="4">4교시</option><option value="5">5교시</option><option value="6">6교시</option><option value="7">7교시</option><option value="8">8교시</option><option value="복귀안함">복귀안함</option>`;
+        if ([...returnTimeSelect.options].some(o => o.value === prev)) returnTimeSelect.value = prev; else returnTimeSelect.value = "";
     }
 
-    const fixedScores = {
-        "무단이탈": 10, "전자기기 무단사용": 10, "핸드폰/Wifi 무단반입": 10, "핸드폰 무단사용": 7,
-        "무단결석": 7, "타층/타관 무단출입": 5, "원내대화": 5, "무단지각": 5, "취침강제하원": 3,
-        "음식물섭취": 3, "입/퇴실 미준수": 3, "핸드폰 미제출": 10,
-    };
-
-    function refreshMoveList() {
-        const tableBody = document.querySelector("#moveList tbody");
-        tableBody.innerHTML = "";
-        moveList.forEach(moveData => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td>${moveData.building}</td>
-                <td>${moveData.seatNumber}</td>
-                <td>${moveData.returnTime}교시</td>
-                <td>${moveData.displayReason || moveData.reason}</td>
-                <td>${moveData.inputDate}</td>
-                <td>${moveData.inputTime}</td>
-                <td>${moveData.score || '-'}</td>
-            `;
-            tableBody.appendChild(row);
-        });
-    }
+    const fixedScores = { "지각":2,"입/퇴실 미준수":3,"핸드폰 미제출":10,"전자기기 무단사용":10,"핸드폰 무단사용":7,"무단이탈":10,"타층/타관 무단출입":5,"핸드폰/Wifi 무단반입":10,"무단결석":7,"원내대화":5,"무단지각":5,"취침강제하원":3,"음식물섭취":3 };
 
     document.getElementById("reason").addEventListener("change", function() {
-        const value = this.value;
-        const isNightStudy = (value === "심야자습 신청" || value === "심야자습 취소");
-        
-        setReturnTimeOptionsForNightStudy(isNightStudy);
-
-        const scoreReasons = ["무단이탈","전자기기 무단사용","핸드폰/Wifi 무단반입","핸드폰 무단사용",
-            "무단결석","타층/타관 무단출입","원내대화","무단지각","취침강제하원","음식물섭취","입/퇴실 미준수","핸드폰 미제출"];
-
-        document.getElementById("scoreDiv").style.display = scoreReasons.includes(value) ? "block" : "none";
-
-        if (value === "기타") {
-            document.getElementById("otherReason").style.display = "block";
-            document.getElementById("otherReasonLabel").style.display = "block";
-        } else {
-            document.getElementById("otherReason").style.display = "none";
-            document.getElementById("otherReasonLabel").style.display = "none";
-            document.getElementById("errorMessage").style.display = "none";
-        }
-        if (fixedScores[value]) {
-            document.getElementById("score").value = fixedScores[value];
-        } else {
-            document.getElementById("score").value = '';
-        }
+        const val = this.value; const isNS = (val === "심야자습 신청" || val === "심야자습 취소"); setReturnTimeOptionsForNightStudy(isNS);
+        document.getElementById("scoreDiv").style.display = fixedScores[val] ? "block" : "none";
+        if (val === "기타") { document.getElementById("otherReason").style.display = "block"; document.getElementById("otherReasonLabel").style.display = "block"; } 
+        else { document.getElementById("otherReason").style.display = "none"; document.getElementById("otherReasonLabel").style.display = "none"; }
+        if (fixedScores[val]) document.getElementById("score").value = fixedScores[val];
     });
 
     document.getElementById("modalBuilding").addEventListener("change", function() {
-        const building = this.value;
-        const container = document.getElementById("seatMapContainer");
-        const grid = document.getElementById("seatGrid");
-        
-        selectedTargetSeat = ""; 
-        
-        if (!building || !seatData[building]) {
-            container.style.display = "none";
-            grid.innerHTML = "";
-            return;
-        }
-
-        const originalBuilding = document.getElementById("building").value.replace("관", "").trim();
-        const seatLetter = document.getElementById("seatNumber").value.trim();
-        const seatNum = document.getElementById("seatNumber2").value.trim();
-        const studentKey = `${originalBuilding}${seatLetter}${seatNum}`;
-        const gender = studentGenderMap[studentKey];
-        const reason = document.getElementById("reason").value;
-
-        const myReservedSeat = userReservations[studentKey];
-
-        if (reason === "심야자습 취소") {
-            document.getElementById("selectedTargetText").textContent = "취소할 예약 좌석을 클릭해주세요 ⬇️";
-        } else {
-            document.getElementById("selectedTargetText").textContent = "지도가 로드되었습니다. 아래에서 좌석을 클릭해주세요 ⬇️";
-        }
-        document.getElementById("selectedTargetText").style.color = "#336699";
-
-        const layout = seatData[building];
-        grid.style.gridTemplateColumns = `42px 42px 14px 42px 42px 14px 42px 42px`; 
-        grid.innerHTML = ""; 
-        
-        layout.forEach((row, rowIndex) => {
-            row.forEach((cell, colIndex) => {
-                const div = document.createElement("div");
-                div.classList.add("seat-cell");
-                const cellText = cell.trim();
-
-                div.style.gridRow = (rowIndex + 1).toString();
-                div.style.gridColumn = (colIndex + 1).toString();
-
-                const isAisleCol = (colIndex === 2 || colIndex === 5);
-                const isTopBlock = rowIndex <= 15; 
-                const isBottomBlock = rowIndex >= 20; 
-
-                if (isAisleCol && (isTopBlock || isBottomBlock)) { 
-                    div.classList.add("aisle");
-                    grid.appendChild(div);
-                    return; 
-                }
-
-                if (cellText === "") {
-                    div.classList.add("empty"); 
-                } else if (cellText.includes("출입문")) {
-                    div.classList.add("door");
-                    div.innerHTML = "🚪<br>출입문";
-                    div.style.gridColumn = "7 / 9"; 
-                    div.style.gridRow = `${rowIndex + 1} / span 2`; 
-                } else if (cellText.includes("페이지")) {
-                    div.classList.add("title-text");
-                    div.textContent = cellText;
-                    div.style.gridColumn = "1 / -1"; 
-                } else {
-                    div.classList.add("seat");
-                    div.textContent = cellText;
-
-                    let isAllowed = true;
-                    let isAlreadyReserved = false;
-
-                    if (reason === "심야자습 취소") {
-                        if (cellText !== myReservedSeat) {
-                            isAllowed = false;
-                        }
-                    } else if (reason === "심야자습 신청") {
-                        const targetNum = parseInt(cellText.slice(-2), 10);
-                        if (gender === "남" && targetNum > 16) isAllowed = false;
-                        if (gender === "여" && (targetNum < 21 || targetNum > 36)) isAllowed = false;
-
-                        const allReservedSeats = Object.values(userReservations);
-                        if (allReservedSeats.includes(cellText)) {
-                            isAllowed = false;
-                            isAlreadyReserved = true; 
-                        }
+        const bld = this.value; const grid = document.getElementById("seatGrid"); selectedTargetSeat = "";
+        if (!bld || !seatData[bld]) { document.getElementById("seatMapContainer").style.display = "none"; return; }
+        const origB = document.getElementById("building").value.replace("관", "").trim();
+        const s1 = document.getElementById("seatNumber").value; const s2 = document.getElementById("seatNumber2").value;
+        const key = `${origB}${s1}${s2}`; const gender = studentGenderMap[key]; const reason = document.getElementById("reason").value;
+        const myRes = userReservations[key];
+        document.getElementById("selectedTargetText").textContent = (reason === "심야자습 취소") ? "취소할 좌석 클릭!" : "좌석 클릭!";
+        grid.style.gridTemplateColumns = `42px 42px 14px 42px 42px 14px 42px 42px`; grid.innerHTML = "";
+        seatData[bld].forEach((row, r) => {
+            row.forEach((cell, c) => {
+                const div = document.createElement("div"); div.className = "seat-cell"; const txt = cell.trim();
+                div.style.gridRow = r+1; div.style.gridColumn = c+1;
+                if ((c===2 || c===5) && (r<=15 || r>=20)) { div.className += " aisle"; grid.appendChild(div); return; }
+                if (!txt) div.className += " empty";
+                else if (txt.includes("출입문")) { div.className += " door"; div.innerHTML = "🚪<br>문"; div.style.gridColumn = "7/9"; div.style.gridRow = `${r+1}/span 2`; }
+                else if (txt.includes("페이지")) { div.className += " title-text"; div.textContent = txt; div.style.gridColumn = "1/-1"; }
+                else {
+                    div.className += " seat"; div.textContent = txt; let ok = true; let rs = false;
+                    if (reason === "심야자습 취소") { if(txt !== myRes) ok = false; }
+                    else {
+                        const n = parseInt(txt.slice(-2)); if((gender==="남" && n>16) || (gender==="여" && (n<21 || n>36))) ok = false;
+                        if (Object.values(userReservations).includes(txt)) { ok = false; rs = true; }
                     }
-
-                    if (isAlreadyReserved) {
-                        div.classList.add("reserved");
-                    } else if (!isAllowed) {
-                        div.classList.add("disabled");
-                    } else {
-                        div.addEventListener("click", function() {
-                            const prevSelected = grid.querySelector(".selected");
-                            if (prevSelected) prevSelected.classList.remove("selected");
-                            
-                            this.classList.add("selected");
-                            selectedTargetSeat = cellText;
-                            
-                            document.getElementById("selectedTargetText").innerHTML = `✅ 선택 완료: <span style='font-size:18px; text-decoration:underline;'>${selectedTargetSeat}</span>`;
-                            document.getElementById("selectedTargetText").style.color = "#274e13";
-                        });
-                    }
+                    if (rs) div.className += " reserved"; else if (!ok) div.className += " disabled";
+                    else div.onclick = function() { const p = grid.querySelector(".selected"); if(p) p.classList.remove("selected"); this.classList.add("selected"); selectedTargetSeat = txt; document.getElementById("selectedTargetText").innerHTML = `✅ 선택: ${txt}`; };
                 }
                 grid.appendChild(div);
             });
         });
-        container.style.display = "block";
+        document.getElementById("seatMapContainer").style.display = "block";
     });
 
-    document.getElementById("moveForm").addEventListener("submit", function(event) {
-        event.preventDefault();
-
-        const building = document.getElementById("building").value;
-        const seatLetter = document.getElementById("seatNumber").value;
-        const seatNum = document.getElementById("seatNumber2").value;
-        const returnTime = document.getElementById("returnTime").value;
-        const reason = document.getElementById("reason").value;
-        const otherReason = document.getElementById("otherReason").value;
-        const score = parseInt(document.getElementById("score").value) || null;
-
-        if (reason === "심야자습 신청" || reason === "심야자습 취소") {
-            if (isNightStudyBlocked()) {
-                showCenterAlert("토요일,일요일 및 지정된 날짜에는 심야자습 신청/취소가 불가능합니다.");
-                return;
-            }
-            if (!["9","10"].includes(returnTime)) {
-                showCenterAlert("심야자습 신청/취소는 복귀교시를 9교시 또는 10교시만 선택할 수 있습니다.");
-                return;
-            }
-            if (!building || !seatLetter || !seatNum || !returnTime) {
-                showCenterAlert("관, 좌석번호, 희망교시는 반드시 입력해야 합니다.");
-                return;
-            }
-
-            const cleanBuilding = building.replace("관", "").trim(); 
-            const studentKey = `${cleanBuilding}${seatLetter.trim()}${seatNum.trim()}`; 
-            
-            if (!studentGenderMap[studentKey]) {
-                alert(`[${studentKey}] 좌석은 성별 명렬표에 등록되지 않았습니다.\n관리자에게 문의해주세요.`);
-                return;
-            }
-
-            if (reason === "심야자습 신청" && userReservations[studentKey]) {
-                alert(`이미 심야자습 자리를 신청하셨습니다.\n(예약된 자리: ${userReservations[studentKey]})\n변경을 원하시면 기존 자리를 취소 후 다시 신청해주세요.`);
-                return;
-            }
-            if (reason === "심야자습 취소" && !userReservations[studentKey]) {
-                alert(`해당 학생([${studentKey}])은 오늘 심야자습을 신청한 내역이 없습니다.`);
-                return;
-            }
-
-            document.getElementById("popupTitle").textContent = reason === "심야자습 취소" ? "🌙 심야자습 취소 좌석 확인" : "🌙 심야자습 타겟 좌석 선택";
-            document.getElementById("popupOriginalSeat").textContent = `${building} ${seatLetter}${seatNum}`;
-            document.getElementById("popupReturnTime").textContent = returnTime;
-            document.getElementById("popupReason").textContent = reason;
-
-            document.getElementById("modalBuilding").value = "";
-            document.getElementById("seatMapContainer").style.display = "none";
-            document.getElementById("selectedTargetText").textContent = "관을 선택해주세요.";
-            document.getElementById("selectedTargetText").style.color = "#d9534f";
-            selectedTargetSeat = "";
-
-            document.getElementById("popupOverlay").style.display = "block";
-            document.getElementById("popup").style.display = "block";
-
-            const popupSubmitButton = document.getElementById("popupSubmitButton");
-            const popupCancelButton = document.getElementById("popupCancelButton");
-
-            popupSubmitButton.onclick = handlePopupSubmit;
-            popupCancelButton.onclick = handlePopupCancel;
-
-        } else if (reason === "기타" && !otherReason.trim()) {
-            document.getElementById("errorMessage").style.display = "block";
-            setTimeout(() => { document.getElementById("errorMessage").style.display = "none"; }, 2000);
-            return;
+    document.getElementById("moveForm").addEventListener("submit", function(e) {
+        e.preventDefault();
+        const b = document.getElementById("building").value; const s1 = document.getElementById("seatNumber").value; const s2 = document.getElementById("seatNumber2").value;
+        const ret = document.getElementById("returnTime").value; const reas = document.getElementById("reason").value;
+        if (reas.includes("심야자습")) {
+            const cleanB = b.replace("관", "").trim(); const key = `${cleanB}${s1}${s2}`;
+            if (!studentGenderMap[key]) { alert("등록되지 않은 학생입니다."); return; }
+            if (reas === "심야자습 신청" && userReservations[key]) { alert(`이미 신청됨 (${userReservations[key]})`); return; }
+            if (reas === "심야자습 취소" && !userReservations[key]) { alert("신청 내역 없음"); return; }
+            document.getElementById("popupOriginalSeat").textContent = `${b} ${s1}${s2}`;
+            document.getElementById("popupReturnTime").textContent = ret + "교시";
+            document.getElementById("popupReason").textContent = reas;
+            document.getElementById("modalBuilding").value = ""; document.getElementById("seatMapContainer").style.display = "none";
+            document.getElementById("popupOverlay").style.display = "block"; document.getElementById("popup").style.display = "block";
         } else {
-            document.getElementById("errorMessage").style.display = "none";
-            const originalSeatCombo = seatLetter + seatNum;
-            submitMoveData(building, originalSeatCombo, returnTime, reason, otherReason, score, "");
+            submitMoveData(b, s1+s2, ret, reas, document.getElementById("otherReason").value, parseInt(document.getElementById("score").value)||null, "");
         }
     });
 
-    // 🚨 수정된 제출 핸들러: 최종 확인 팝업 추가
     function handlePopupSubmit() {
-        const targetBuilding = document.getElementById("modalBuilding").value;
-
-        if (!targetBuilding || !selectedTargetSeat) {
-            alert("지도를 클릭하여 타겟 좌석을 확정해주세요!");
-            return;
-        }
-
-        const returnTime = document.getElementById("returnTime").value;
-        const reason = document.getElementById("reason").value;
-        const score = parseInt(document.getElementById("score").value) || null;
-
-        const originalBuilding = document.getElementById("building").value;
-        const seatLetter = document.getElementById("seatNumber").value;
-        const seatNum = document.getElementById("seatNumber2").value;
-        const originalSeatCombo = seatLetter + seatNum;
-
-        // ✅ 최종 확인용 메시지 박스
-        const confirmMessage = `[${reason} 최종 확인]\n\n` +
-                               `본인 좌석: ${originalBuilding} ${originalSeatCombo}\n` +
-                               `이동 좌석: ${selectedTargetSeat}\n` +
-                               `이용 교시: ${returnTime}교시\n\n` +
-                               `위 내용이 정확합니까? [확인] 클릭 시 제출됩니다.`;
-
-        if (confirm(confirmMessage)) {
-            submitMoveData(originalBuilding, originalSeatCombo, returnTime, reason, "", score, selectedTargetSeat);
-            
-            document.getElementById("popup").style.display = "none";
-            document.getElementById("popupOverlay").style.display = "none";
-        }
-    }
-
-    function handlePopupCancel() {
+        if (!selectedTargetSeat) { alert("좌석을 선택해주세요!"); return; }
+        document.getElementById("c_origSeat").textContent = document.getElementById("building").value + " " + document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
+        document.getElementById("c_targetSeat").textContent = selectedTargetSeat;
+        document.getElementById("c_returnTime").textContent = document.getElementById("returnTime").value + "교시";
+        document.getElementById("confirmReasonTitle").textContent = `[${document.getElementById("reason").value}] 최종 확인`;
         document.getElementById("popup").style.display = "none";
-        document.getElementById("popupOverlay").style.display = "none";
+        document.getElementById("finalConfirmPopup").style.display = "block";
     }
 
-    function submitMoveData(building, seatNumber, returnTime, reason, otherReason, score, targetSeat) {
+    document.getElementById("finalYesButton").onclick = function() {
+        const b = document.getElementById("building").value; const s = document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
+        submitMoveData(b, s, document.getElementById("returnTime").value, document.getElementById("reason").value, "", parseInt(document.getElementById("score").value)||null, selectedTargetSeat);
+        document.getElementById("finalConfirmPopup").style.display = "none"; document.getElementById("popupOverlay").style.display = "none";
+    };
+    document.getElementById("finalNoButton").onclick = function() { document.getElementById("finalConfirmPopup").style.display = "none"; document.getElementById("popup").style.display = "block"; };
+    document.getElementById("popupSubmitButton").onclick = handlePopupSubmit;
+    document.getElementById("popupCancelButton").onclick = function() { document.getElementById("popup").style.display = "none"; document.getElementById("popupOverlay").style.display = "none"; };
+
+    function submitMoveData(bld, sNum, ret, reas, other, score, target) {
         const now = new Date();
-        const inputDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-        const inputTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-
-        const cleanReason = reason === "기타" ? otherReason : reason;
-
-        const moveData = {
-            building: building,
-            seatNumber: seatNumber,
-            returnTime: returnTime,     
-            reason: cleanReason,
-            score: ["입/퇴실 미준수","핸드폰 미제출","전자기기 무단사용","핸드폰 무단사용","무단이탈","타층/타관 무단출입","핸드폰/Wifi 무단반입","무단결석","원내대화","무단지각","취침강제하원","음식물섭취",].includes(reason) ? score : null,
-            inputDate: inputDate,
-            inputTime: inputTime,
-            targetSeat: targetSeat || "" 
-        };
-
-        let displayReason = cleanReason;
-        const studentKey = building.replace("관", "").trim() + seatNumber;
-
-        if (reason === "심야자습 신청" || reason === "심야자습 취소") {
-            displayReason = `${cleanReason} ➡️ ${targetSeat}`;
-            
-            if (reason === "심야자습 신청") {
-                userReservations[studentKey] = targetSeat;
-            } else if (reason === "심야자습 취소") {
-                delete userReservations[studentKey];
-            }
+        const date = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+        const cleanR = reas === "기타" ? other : reas;
+        const data = { building: bld, seatNumber: sNum, returnTime: ret, reason: cleanR, score: score, inputDate: date, inputTime: time, targetSeat: target };
+        if (reas.includes("심야자습")) {
+            const key = bld.replace("관", "").trim() + sNum;
+            if (reas === "심야자습 신청") userReservations[key] = target; else delete userReservations[key];
         }
-
-        const tableData = { ...moveData, displayReason: displayReason };
-        moveList.unshift(tableData); 
-        refreshMoveList();
-
-        document.getElementById("moveForm").reset();
-        document.getElementById("scoreDiv").style.display = "none";
-        document.getElementById("otherReason").style.display = "none";
-        document.getElementById("otherReasonLabel").style.display = "none";
-        
+        const tableData = { ...data, displayReason: (reas.includes("심야자습")) ? `${cleanR} ➡️ ${target}` : cleanR };
+        moveList.unshift(tableData); refreshMoveList();
+        document.getElementById("moveForm").reset(); document.getElementById("scoreDiv").style.display = "none"; document.getElementById("otherReason").style.display = "none";
         setReturnTimeOptionsForNightStudy(false);
-
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify(moveData)
-        }).catch(err => console.error("제출 에러:", err));
+        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) }).catch(err => console.error("에러"));
     }
 
-    function resetTable() {
-        moveList = [];
-        refreshMoveList();
+    function refreshMoveList() {
+        const tbody = document.querySelector("#moveList tbody"); tbody.innerHTML = "";
+        moveList.forEach(m => { const r = document.createElement("tr"); r.innerHTML = `<td>${m.building}</td><td>${m.seatNumber}</td><td>${m.returnTime}교시</td><td>${m.displayReason || m.reason}</td><td>${m.inputDate}</td><td>${m.inputTime}</td><td>${m.score || '-'}</td>`; tbody.appendChild(r); });
     }
+    function resetTable() { moveList = []; refreshMoveList(); }
     </script>
 </body>
 </html>
