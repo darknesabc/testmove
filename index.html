@@ -269,7 +269,7 @@
         if ([...returnTimeSelect.options].some(o => o.value === prev)) returnTimeSelect.value = prev; else returnTimeSelect.value = "";
     }
 
-    const fixedScores = { "지각":2,"입/퇴실 미준수":3,"핸드폰 미제출":10,"전자기기 무단사용":10,"핸드폰 무단사용":7,"무단이탈":10,"타층/타관 무단출입":5,"핸드폰/Wifi 무단반입":10,"무단결석":7,"원내대화":5,"무단지각":5,"취침강제하원":3,"음식물섭취":3 };
+    const fixedScores = { "지각":1,"입/퇴실 미준수":3,"핸드폰 미제출":10,"전자기기 무단사용":10,"핸드폰 무단사용":7,"무단이탈":10,"타층/타관 무단출입":5,"핸드폰/Wifi 무단반입":10,"무단결석":7,"원내대화":5,"무단지각":5,"취침강제하원":3,"음식물섭취":3 };
 
     document.getElementById("reason").addEventListener("change", function() {
         const val = this.value; const isNS = (val === "심야자습 신청" || val === "심야자습 취소"); setReturnTimeOptionsForNightStudy(isNS);
@@ -384,4 +384,5 @@ submitMoveData(b, s1+s2, ret, reas, document.getElementById("otherReason").value
     </script>
 </body>
 </html>
+
 
