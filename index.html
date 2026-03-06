@@ -332,7 +332,10 @@
             document.getElementById("popupOverlay").style.display = "block"; 
             document.getElementById("popup").style.display = "block";
         } else {
-            submitMoveData(b, s1+s2, ret, reas, document.getElementById("otherReason").value, parseInt(document.getElementById("score").value)||null, "");
+            const isScoreReason = fixedScores[reas] ? true : false; // 벌점 사유인지 확인
+const finalScore = isScoreReason ? parseInt(document.getElementById("score").value) : null; // 벌점 사유가 아니면 null
+
+submitMoveData(b, s1+s2, ret, reas, document.getElementById("otherReason").value, finalScore, "");
         }
     });
 
@@ -381,3 +384,4 @@
     </script>
 </body>
 </html>
+
