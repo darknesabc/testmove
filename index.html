@@ -99,7 +99,8 @@
             <option value="4-3관">4-3관</option><option value="4-4관">4-4관</option>
             <option value="4-5관">4-5관</option><option value="5-1관">5-1관</option>
             <option value="6-1관">6-1관</option><option value="7-1관">7-1관</option>
-            <option value="3-1관">3-1관</option> </select>
+            <option value="3-1관">3-1관</option>
+        </select>
 
         <label for="seatNumber">좌석번호 (본인):</label>
         <div style="display: flex; gap: 10px;">
@@ -243,8 +244,8 @@
     let moveList = [];
     let selectedTargetSeat = ""; 
     let studentGenderMap = {};
-    let studentNameMap = {};    // 추가
-    let studentTeacherMap = {}; // 추가
+    let studentNameMap = {};    
+    let studentTeacherMap = {}; 
     let userReservations = {}; 
 
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYJ_wZv0U63C7_S44sNdzHJcSc5ftD1uNZOC-nNhL7Mm--NdV0ZZ6PRKjoW3m07vAs/exec";
@@ -255,8 +256,8 @@
             try {
                 const parsedData = JSON.parse(text); 
                 studentGenderMap = parsedData.genderMap || {}; 
-                studentNameMap = parsedData.nameMap || {};       // 추가
-                studentTeacherMap = parsedData.teacherMap || {}; // 추가
+                studentNameMap = parsedData.nameMap || {};       
+                studentTeacherMap = parsedData.teacherMap || {}; 
                 userReservations = parsedData.userReservations || {}; 
                 console.log("데이터 연동 성공");
                 setReturnTimeOptionsForNightStudy(false);
@@ -264,18 +265,32 @@
         }).catch(err => console.error("통신 오류"));
     };
 
-    // 상담 정보 업데이트 함수
+    // 상담 정보 업데이트 함수 (내부적으로 '관'을 제거하여 매칭)
     function updateCounselingDisplay() {
+        // "3-1관" 처럼 넘어온 값에서 "관"을 제거하고 공백을 없앱니다.
         const b = document.getElementById("building").value.replace("관", "").trim();
         const s1 = document.getElementById("seatNumber").value;
         const s2 = document.getElementById("seatNumber2").value;
         const reason = document.getElementById("reason").value;
+        
+        // 최종 생성되는 키 (예: "3-1A01")
         const key = b + s1 + s2;
 
         const infoDiv = document.getElementById("counselingInfo");
-        if (reason.includes("상담") && s1 && s2) {
-            document.getElementById("infoStudentName").textContent = studentNameMap[key] || "미등록 학생";
-            document.getElementById("infoTeacherName").textContent = studentTeacherMap[key] || "미배정 담임";
+        if (reason.includes("상담") && s1 && s2 && b) {
+            console.log("🔍 [디버깅] 시트에서 찾고 있는 좌석 키:", key); // F12 콘솔에서 확인 가능
+
+            const studentName = studentNameMap[key];
+            const teacherName = studentTeacherMap[key];
+
+            if (studentName) {
+                document.getElementById("infoStudentName").textContent = studentName;
+                document.getElementById("infoTeacherName").textContent = teacherName || "미배정 담임";
+            } else {
+                // 명렬표에서 데이터를 못 찾은 경우, 어떤 키로 찾으려 했는지 사용자에게 보여줍니다.
+                document.getElementById("infoStudentName").textContent = "미등록 (" + key + ")";
+                document.getElementById("infoTeacherName").textContent = "-";
+            }
             infoDiv.style.display = "block";
         } else {
             infoDiv.style.display = "none";
@@ -383,7 +398,7 @@
             document.getElementById("c_targetArea").style.display = "block";
             document.getElementById("c_targetSeat").textContent = teacherName + " 선생님";
             document.getElementById("c_returnTime").textContent = ret + "교시";
-            selectedTargetSeat = teacherName; // 상담 신청 시 타겟좌석에 담임 이름을 넣음
+            selectedTargetSeat = teacherName; 
             document.getElementById("popupOverlay").style.display = "block";
             document.getElementById("finalConfirmPopup").style.display = "block";
         } else {
@@ -434,7 +449,6 @@
         
         let finalReason = reas === "기타" ? other : reas;
         
-        // 상담인 경우 사유에 담임 이름을 포함시킬 수도 있음
         if (reas.includes("상담")) {
             finalReason = `${reas} (${target} 선생님)`;
         }
