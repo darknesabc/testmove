@@ -66,6 +66,7 @@
         .cancel-btn:hover { background-color: #888 !important; }
 
         #finalConfirmPopup { max-width: 400px; z-index: 1100; border-top: 5px solid #336699; }
+        #counselingPopup { max-width: 450px; z-index: 1100; border-top: 5px solid #fab005; }
         .confirm-info-box { text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #eee; }
         .confirm-info-box p { margin: 8px 0; font-size: 15px; }
 
@@ -191,12 +192,12 @@
 
     <div id="popupOverlay" class="popup-overlay"></div>
 
-    <div id="counselingPopup" class="popup" style="border-top: 5px solid #fab005;">
+    <div id="counselingPopup" class="popup">
         <div class="popup-content">
             <h2 id="counselingPopupTitle">📅 상담 일정 선택</h2>
             <div class="confirm-info-box">
                 <p>👨‍🏫 <b>담당 담임:</b> <span id="modalTeacherName"></span></p>
-                <label for="consultDate"><b>1. 상담 날짜 선택 (근무일만 활성화):</b></label>
+                <label for="consultDate"><b>1. 상담 날짜 선택:</b></label>
                 <input type="text" id="consultDate" placeholder="날짜를 선택하세요" readonly>
                 
                 <label for="consultTime"><b>2. 상담 시간 선택:</b></label>
@@ -229,7 +230,7 @@
             <div id="seatMapContainer" class="seat-map-container"><div id="seatGrid" class="seat-grid"></div></div>
             <div class="popup-buttons">
                 <button id="popupSubmitButton">최종 제출</button>
-                <button id="popupCancelButton" class="cancel-btn" onclick="closeAllPopups()">취소</button>
+                <button onclick="closeAllPopups()" class="cancel-btn">취소</button>
             </div>
         </div>
     </div>
@@ -245,15 +246,8 @@
             <p style="color:#d9534f; font-weight:bold;">위 내용이 정확합니까?</p>
             <div class="popup-buttons">
                 <button id="finalYesButton" style="background-color: #274e13;">네, 신청합니다</button>
-                <button id="finalNoButton" class="cancel-btn" onclick="closeAllPopups()">아니오</button>
+                <button class="cancel-btn" onclick="closeAllPopups()">아니오</button>
             </div>
-        </div>
-    </div>
-
-    <div id="alertPopup" class="popup" style="max-width: 400px; z-index: 2000;">
-        <div class="popup-content">
-            <h2>안내</h2><p id="alertPopupMessage" style="line-height:1.6; margin: 20px 0;"></p>
-            <div class="popup-buttons"><button id="alertPopupOkButton" onclick="closeCenterAlert()">확인</button></div>
         </div>
     </div>
 
@@ -264,7 +258,8 @@
     let studentNameMap = {};    
     let studentTeacherMap = {}; 
     let userReservations = {}; 
-    let validConsultDates = []; // 🚨 서버에서 온 허용 날짜 목록
+    let validConsultDates = []; // 🚨 서버에서 받은 근무일 목록
+    let studentBookings = {};  // 🚨 본인의 예약 내역 (취소용)
     let fp = null; // 달력 인스턴스
 
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYJ_wZv0U63C7_S44sNdzHJcSc5ftD1uNZOC-nNhL7Mm--NdV0ZZ6PRKjoW3m07vAs/exec";
@@ -276,42 +271,67 @@
             studentNameMap = data.nameMap || {};        
             studentTeacherMap = data.teacherMap || {}; 
             userReservations = data.userReservations || {}; 
-            validConsultDates = data.validDates || []; // 🚨 서버에서 날짜 목록 수신
-            console.log("데이터 연동 성공");
+            validConsultDates = data.validDates || []; // 🚨 근무일 목록 수신
+            initDatePicker(); // 초기 달력 설정 (근무일 기준)
             setReturnTimeOptionsForNightStudy(false);
-            initDatePicker(); // 달력 초기화
         }).catch(err => console.error("통신 오류"));
     };
 
-    // 🚨 달력 초기화 함수 (허용된 날짜만 활성화)
-    function initDatePicker() {
+    // 🚨 달력 설정 함수 (상태에 따라 허용 날짜를 바꿈)
+    function initDatePicker(allowDates = validConsultDates) {
+        if (fp) fp.destroy(); // 기존 달력 제거
         fp = flatpickr("#consultDate", {
             locale: "ko",
             dateFormat: "Y-m-d",
-            enable: validConsultDates, // 🚨 서버에서 받은 날짜만 클릭 가능!
+            enable: allowDates, // 🚨 전달된 목록의 날짜만 클릭 가능!
             onChange: function(selectedDates, dateStr) {
-                if (dateStr) loadAvailableTimes(dateStr);
+                if (dateStr) updateTimeOptions(dateStr);
             }
         });
     }
 
-    async function loadAvailableTimes(dateStr) {
-        const teacher = document.getElementById("infoTeacherName").textContent;
+    // 🚨 날짜 선택 시 시간 목록 업데이트 (신청/취소 분리)
+    async function updateTimeOptions(dateStr) {
+        const reason = document.getElementById("reason").value;
         const timeSelect = document.getElementById("consultTime");
-        if (teacher === "-" || teacher === "미배정 담임") return;
+        const teacher = document.getElementById("infoTeacherName").textContent;
 
-        timeSelect.innerHTML = '<option>시간 조회 중...</option>';
-        try {
-            const url = `${SCRIPT_URL}?action=getAvailableTimes&date=${dateStr}&teacher=${encodeURIComponent(teacher)}&t=${Date.now()}`;
-            const res = await fetch(url);
-            const data = await res.json();
-            timeSelect.innerHTML = '<option value="">선택하세요</option>';
-            data.times.forEach(t => {
+        if (reason === "상담 취소") {
+            // 🚨 취소일 때는 본인이 예약한 시간만 보여줌
+            timeSelect.innerHTML = '<option value="">시간 선택</option>';
+            studentBookings[dateStr].forEach(t => {
                 const opt = document.createElement("option"); opt.value = t; opt.textContent = t;
                 timeSelect.appendChild(opt);
             });
-            if(data.times.length === 0) timeSelect.innerHTML = '<option value="">예약 가능한 시간이 없습니다.</option>';
-        } catch (e) { timeSelect.innerHTML = '<option value="">오류 발생 (다시 시도)</option>'; }
+        } else {
+            // 🚨 신청일 때는 선생님의 빈 시간만 서버에서 가져옴
+            timeSelect.innerHTML = '<option>시간 조회 중...</option>';
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=getAvailableTimes&date=${dateStr}&teacher=${encodeURIComponent(teacher)}`);
+                const data = await res.json();
+                timeSelect.innerHTML = '<option value="">선택하세요</option>';
+                data.times.forEach(t => {
+                    const opt = document.createElement("option"); opt.value = t; opt.textContent = t;
+                    timeSelect.appendChild(opt);
+                });
+            } catch (e) { timeSelect.innerHTML = '<option value="">오류 발생</option>'; }
+        }
+    }
+
+    // 🚨 취소 시 본인 예약 내역 불러오기
+    async function loadStudentBookings() {
+        const b = document.getElementById("building").value.replace("관", "").trim();
+        const s1 = document.getElementById("seatNumber").value;
+        const s2 = document.getElementById("seatNumber2").value;
+        const studentInfo = `${b}${s1}${s2} ${studentNameMap[b+s1+s2]}`;
+
+        const res = await fetch(`${SCRIPT_URL}?action=getStudentBookings&studentInfo=${encodeURIComponent(studentInfo)}`);
+        const data = await res.json();
+        studentBookings = data.bookings; // { "2026-03-10": ["14:00~14:20"], ... }
+        
+        // 🚨 예약된 날짜들만 달력에서 클릭 가능하게 설정
+        initDatePicker(Object.keys(studentBookings)); 
+        fp.open();
     }
 
     function updateCounselingDisplay() {
@@ -345,42 +365,27 @@
     };
 
     function closeAllPopups() { document.querySelectorAll(".popup, .popup-overlay").forEach(el => el.style.display = "none"); }
-    function showCenterAlert(message) { document.getElementById("alertPopupMessage").textContent = message; document.getElementById("alertPopup").style.display = "block"; document.getElementById("popupOverlay").style.display = "block"; }
-    function closeCenterAlert() { document.getElementById("alertPopup").style.display = "none"; if(!document.querySelector(".popup[style*='block']")) document.getElementById("popupOverlay").style.display = "none"; }
 
     const returnTimeSelect = document.getElementById("returnTime");
     function setReturnTimeOptionsForNightStudy(isNightStudy) {
-        const prev = returnTimeSelect.value;
         if (isNightStudy) returnTimeSelect.innerHTML = `<option value="">선택하세요</option><option value="9">9교시</option><option value="10">10교시</option>`;
         else returnTimeSelect.innerHTML = `<option value="">선택하세요</option><option value="1">1교시</option><option value="2">2교시</option><option value="3">3교시</option><option value="4">4교시</option><option value="5">5교시</option><option value="6">6교시</option><option value="7">7교시</option><option value="8">8교시</option><option value="복귀안함">복귀안함</option>`;
-        if ([...returnTimeSelect.options].some(o => o.value === prev)) returnTimeSelect.value = prev; else returnTimeSelect.value = "";
     }
 
     const fixedScores = { "지각":2,"입/퇴실 미준수":3,"핸드폰 미제출":10,"전자기기 무단사용":10,"핸드폰 무단사용":7,"무단이탈":10,"타층/타관 무단출입":5,"핸드폰/Wifi 무단반입":10,"무단결석":7,"원내대화":5,"무단지각":5,"취침강제하원":3,"음식물섭취":3 };
 
     document.getElementById("reason").addEventListener("change", function() {
         const val = this.value; 
-        const isNS = (val === "심야자습 신청" || val === "심야자습 취소"); 
-        setReturnTimeOptionsForNightStudy(isNS);
+        setReturnTimeOptionsForNightStudy(val.includes("심야자습"));
         updateCounselingDisplay();
         document.getElementById("scoreDiv").style.display = fixedScores[val] ? "block" : "none";
-        if (val === "기타") { document.getElementById("otherReason").style.display = "block"; document.getElementById("otherReasonLabel").style.display = "block"; } 
-        else { document.getElementById("otherReason").style.display = "none"; document.getElementById("otherReasonLabel").style.display = "none"; }
-        if (fixedScores[val]) document.getElementById("score").value = fixedScores[val];
-    });
-
-    ["building", "seatNumber", "seatNumber2"].forEach(id => {
-        document.getElementById(id).addEventListener("change", updateCounselingDisplay);
+        document.getElementById("otherReason").style.display = (val === "기타") ? "block" : "none";
     });
 
     document.getElementById("modalBuilding").addEventListener("change", function() {
         const bld = this.value; const grid = document.getElementById("seatGrid"); selectedTargetSeat = "";
         if (!bld || !seatData[bld]) { document.getElementById("seatMapContainer").style.display = "none"; return; }
-        const origB = document.getElementById("building").value.replace("관", "").trim();
-        const s1 = document.getElementById("seatNumber").value; const s2 = document.getElementById("seatNumber2").value;
-        const key = `${origB}${s1}${s2}`; const gender = studentGenderMap[key]; const reason = document.getElementById("reason").value;
-        const myRes = userReservations[key];
-        document.getElementById("selectedTargetText").textContent = (reason === "심야자습 취소") ? "취소할 좌석 클릭!" : "좌석 클릭!";
+        const key = document.getElementById("building").value.replace("관", "").trim() + document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
         grid.style.gridTemplateColumns = `42px 42px 14px 42px 42px 14px 42px 42px`; grid.innerHTML = "";
         seatData[bld].forEach((row, r) => {
             row.forEach((cell, c) => {
@@ -388,16 +393,9 @@
                 div.style.gridRow = r+1; div.style.gridColumn = c+1;
                 if ((c===2 || c===5) && (r<=15 || r>=20)) { div.className += " aisle"; grid.appendChild(div); return; }
                 if (!txt) div.className += " empty";
-                else if (txt.includes("출입문")) { div.className += " door"; div.innerHTML = "🚪<br>문"; div.style.gridColumn = "7/9"; div.style.gridRow = `${r+1}/span 2`; }
-                else if (txt.includes("페이지")) { div.className += " title-text"; div.textContent = txt; div.style.gridColumn = "1/-1"; }
                 else {
-                    div.className += " seat"; div.textContent = txt; let ok = true; let rs = false;
-                    if (reason === "심야자습 취소") { if(txt !== myRes) ok = false; }
-                    else {
-                        const n = parseInt(txt.slice(-2)); if((gender==="남" && n>16) || (gender==="여" && (n<21 || n>36))) ok = false;
-                        if (Object.values(userReservations).includes(txt)) { ok = false; rs = true; }
-                    }
-                    if (rs) div.className += " reserved"; else if (!ok) div.className += " disabled";
+                    div.className += " seat"; div.textContent = txt;
+                    if (Object.values(userReservations).includes(txt)) div.className += " reserved";
                     else div.onclick = function() { const p = grid.querySelector(".selected"); if(p) p.classList.remove("selected"); this.classList.add("selected"); selectedTargetSeat = txt; document.getElementById("selectedTargetText").innerHTML = `✅ 선택: ${txt}`; };
                 }
                 grid.appendChild(div);
@@ -406,114 +404,72 @@
         document.getElementById("seatMapContainer").style.display = "block";
     });
 
-    document.getElementById("moveForm").addEventListener("submit", function(e) {
+    document.getElementById("moveForm").addEventListener("submit", async function(e) {
         e.preventDefault();
-        const b = document.getElementById("building").value; 
-        const s1 = document.getElementById("seatNumber").value; 
-        const s2 = document.getElementById("seatNumber2").value;
-        const ret = document.getElementById("returnTime").value; 
         const reas = document.getElementById("reason").value;
-        const cleanB = b.replace("관", "").trim(); 
-        const key = `${cleanB}${s1}${s2}`;
+        const teacher = document.getElementById("infoTeacherName").textContent;
 
-        if (!studentGenderMap[key]) { alert("등록되지 않은 좌석입니다."); return; }
-
-        if (reas.includes("심야자습")) {
-            if (reas === "심야자습 신청" && userReservations[key]) { alert(`이미 자리를 신청하셨습니다. (${userReservations[key]})`); return; }
-            if (reas === "심야자습 취소" && !userReservations[key]) { alert("신청 내역이 없습니다."); return; }
-            if (!ret) { alert("복귀 교시를 선택해주세요."); return; }
-            document.getElementById("popupTitle").textContent = reas;
-            document.getElementById("popupOriginalSeat").textContent = `${b} ${s1}${s2}`;
-            document.getElementById("popupReturnTime").textContent = ret + "교시";
-            document.getElementById("modalBuilding").value = ""; 
-            document.getElementById("seatMapContainer").style.display = "none";
-            document.getElementById("selectedTargetText").textContent = "관을 선택해주세요.";
-            document.getElementById("popupOverlay").style.display = "block"; 
-            document.getElementById("popup").style.display = "block";
-        } 
-        else if (reas.includes("상담")) {
-            const teacher = document.getElementById("infoTeacherName").textContent;
-            if (teacher === "-" || teacher === "미배정 담임") return alert("담임 정보가 없습니다.");
+        if (reas === "상담 취소") {
+            if (teacher === "-") return alert("먼저 좌석을 확인하세요.");
             document.getElementById("modalTeacherName").textContent = teacher;
-            if (fp) fp.clear(); // 날짜 초기화
-            document.getElementById("consultTime").innerHTML = '<option value="">날짜를 먼저 선택하세요</option>';
             document.getElementById("counselingPopup").style.display = "block";
             document.getElementById("popupOverlay").style.display = "block";
+            loadStudentBookings(); // 🚨 본인 예약 데이터 조회
+        } else if (reas === "상담 신청") {
+            if (teacher === "-") return alert("먼저 좌석을 확인하세요.");
+            document.getElementById("modalTeacherName").textContent = teacher;
+            initDatePicker(validConsultDates); // 🚨 근무일만 달력 활성화
+            document.getElementById("counselingPopup").style.display = "block";
+            document.getElementById("popupOverlay").style.display = "block";
+        } else if (reas.includes("심야자습")) {
+            document.getElementById("popupTitle").textContent = reas;
+            document.getElementById("popupOriginalSeat").textContent = document.getElementById("building").value + " " + document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
+            document.getElementById("popupReturnTime").textContent = document.getElementById("returnTime").value + "교시";
+            document.getElementById("popup").style.display = "block";
+            document.getElementById("popupOverlay").style.display = "block";
         } else {
-            submitMoveData(b, s1+s2, ret, reas, document.getElementById("otherReason").value, parseInt(document.getElementById("score").value)||null, "");
+            submitMoveData();
         }
     });
 
     document.getElementById("consultModalSubmitBtn").onclick = function() {
         const date = document.getElementById("consultDate").value;
         const time = document.getElementById("consultTime").value;
-        if (!date || !time) return alert("날짜와 시간을 선택해주세요.");
+        if (!date || !time) return alert("날짜와 시간을 선택하세요.");
+        
         selectedTargetSeat = document.getElementById("modalTeacherName").textContent;
         document.getElementById("c_origSeat").textContent = document.getElementById("building").value + " " + document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
-        document.getElementById("c_targetArea").style.display = "block";
-        document.getElementById("c_targetSeat").textContent = `${selectedTargetSeat} 선생님 (${date})`;
+        document.getElementById("c_targetSeat").textContent = `${selectedTargetSeat} (${date})`;
         document.getElementById("c_returnTime").textContent = time;
         document.getElementById("confirmReasonTitle").textContent = `[${document.getElementById("reason").value}] 최종 확인`;
+        
         document.getElementById("counselingPopup").style.display = "none";
         document.getElementById("finalConfirmPopup").style.display = "block";
     };
 
-    function handlePopupSubmit() {
-        if (!selectedTargetSeat) { alert("좌석을 선택해주세요!"); return; }
-        document.getElementById("c_origSeat").textContent = document.getElementById("building").value + " " + document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
-        document.getElementById("c_targetArea").style.display = "block";
-        document.getElementById("c_targetSeat").textContent = selectedTargetSeat;
-        document.getElementById("c_returnTime").textContent = document.getElementById("returnTime").value + "교시";
-        document.getElementById("confirmReasonTitle").textContent = `[${document.getElementById("reason").value}] 최종 확인`;
-        document.getElementById("popup").style.display = "none";
-        document.getElementById("finalConfirmPopup").style.display = "block";
-    }
-
     document.getElementById("finalYesButton").onclick = function() {
-        const b = document.getElementById("building").value; 
-        const s = document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
-        const reas = document.getElementById("reason").value;
-        const other = document.getElementById("otherReason").value;
-        const rawScore = parseInt(document.getElementById("score").value);
-        const score = fixedScores[reas] ? rawScore : null; // 🚨 상담 시 점수 오류 해결
-        const ret = document.getElementById("c_returnTime").textContent;
-        const customDate = document.getElementById("consultDate").value; 
-        submitMoveData(b, s, ret, reas, other, score, selectedTargetSeat, customDate);
+        submitMoveData();
         closeAllPopups();
     };
 
-    document.getElementById("popupSubmitButton").onclick = handlePopupSubmit;
+    function submitMoveData() {
+        const bld = document.getElementById("building").value;
+        const sNum = document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
+        const reas = document.getElementById("reason").value;
+        const rawScore = parseInt(document.getElementById("score").value);
+        const score = fixedScores[reas] ? rawScore : null; // 🚨 상담 시 점수 오류 해결 (null 전송)
 
-    function submitMoveData(bld, sNum, ret, reas, other, score, target, customDate) {
-        const now = new Date();
-        const date = customDate || `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-        const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-        let finalReason = reas === "기타" ? other : reas;
-        if (reas.includes("상담")) finalReason = `${reas} (${target} 선생님)`;
-        const data = { building: bld, seatNumber: sNum, returnTime: ret, reason: finalReason, score: score, inputDate: date, inputTime: time, targetSeat: target, studentName: studentNameMap[bld.replace("관","").trim()+sNum], teacherName: target };
-        if (reas.includes("심야자습")) {
-            const key = bld.replace("관", "").trim() + sNum;
-            if (reas === "심야자습 신청") userReservations[key] = target; else delete userReservations[key];
-        }
-        const tableData = { ...data, displayReason: (reas.includes("심야자습")) ? `${reas} ➡️ ${target}` : finalReason };
-        moveList.unshift(tableData); refreshMoveList();
-        document.getElementById("moveForm").reset(); 
-        document.getElementById("scoreDiv").style.display = "none"; 
-        document.getElementById("otherReason").style.display = "none";
-        document.getElementById("counselingInfo").style.display = "none";
-        setReturnTimeOptionsForNightStudy(false);
-        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) }).catch(err => console.error("전송 에러"));
+        const data = { 
+            building: bld, seatNumber: sNum, returnTime: document.getElementById("c_returnTime").textContent || document.getElementById("returnTime").value, 
+            reason: reas.includes("상담") ? `${reas} (${selectedTargetSeat})` : (reas === "기타" ? document.getElementById("otherReason").value : reas), 
+            score: score, inputDate: document.getElementById("consultDate").value || new Date().toISOString().split('T')[0], 
+            inputTime: new Date().toLocaleTimeString('ko-KR', {hour12:false}), targetSeat: selectedTargetSeat, 
+            studentName: studentNameMap[bld.replace("관","").trim()+sNum], teacherName: selectedTargetSeat 
+        };
+        
+        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) });
+        alert("신청 완료!"); location.reload();
     }
-
-    function refreshMoveList() {
-        const tbody = document.querySelector("#moveList tbody"); tbody.innerHTML = "";
-        moveList.forEach(m => { 
-            const r = document.createElement("tr"); 
-            r.innerHTML = `<td>${m.building}</td><td>${m.seatNumber}</td><td>${m.returnTime}</td><td>${m.displayReason || m.reason}</td><td>${m.inputDate}</td><td>${m.inputTime}</td><td>${m.score !== null ? m.score : '-'}</td>`; 
-            tbody.appendChild(r); 
-        });
-    }
-    function resetTable() { moveList = []; refreshMoveList(); }
     </script>
 </body>
 </html>
