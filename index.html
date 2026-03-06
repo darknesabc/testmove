@@ -13,11 +13,11 @@
             background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
         label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
-        select, textarea, input[type="date"] {
+        select, textarea {
             width: 100%; padding: 12px; margin-bottom: 15px; box-sizing: border-box;
             font-size: 16px; border-radius: 6px; border: 1px solid #ccc; background-color: #fafafa;
         }
-        select:focus, textarea:focus, input:focus { outline: none; border-color: #336699; background-color: #fff; }
+        select:focus, textarea:focus { outline: none; border-color: #336699; background-color: #fff; }
         button {
             padding: 12px 20px; background-color: #336699; color: #fff; font-weight: bold; font-size: 16px;
             border: none; cursor: pointer; width: 100%; border-radius: 6px; transition: background-color 0.2s;
@@ -196,7 +196,9 @@
             <div class="confirm-info-box">
                 <p>👨‍🏫 <b>담당 담임:</b> <span id="modalTeacherName"></span></p>
                 <label for="consultDate"><b>1. 상담 날짜 선택:</b></label>
-                <input type="date" id="consultDate">
+                <select id="consultDate">
+                    <option value="">날짜를 먼저 선택하세요</option>
+                </select>
                 
                 <label for="consultTime"><b>2. 상담 시간 선택:</b></label>
                 <select id="consultTime">
@@ -265,6 +267,7 @@
     let studentNameMap = {};    
     let studentTeacherMap = {}; 
     let userReservations = {}; 
+    let validConsultDates = []; // 🚨 추가: 서버에서 가져온 상담 가능 날짜들
 
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYJ_wZv0U63C7_S44sNdzHJcSc5ftD1uNZOC-nNhL7Mm--NdV0ZZ6PRKjoW3m07vAs/exec";
 
@@ -275,6 +278,7 @@
             studentNameMap = data.nameMap || {};        
             studentTeacherMap = data.teacherMap || {}; 
             userReservations = data.userReservations || {}; 
+            validConsultDates = data.validDates || []; // 🚨 서버에서 날짜 목록 받아오기
             console.log("데이터 연동 성공");
             setReturnTimeOptionsForNightStudy(false);
         }).catch(err => console.error("통신 오류"));
@@ -339,7 +343,7 @@
         document.getElementById(id).addEventListener("change", updateCounselingDisplay);
     });
 
-    // 🚨 [추가] 상담 날짜 변경 시 실시간 시간 조회
+    // 🚨 상담 날짜 변경 시 실시간 시간 조회
     document.getElementById("consultDate").addEventListener("change", async function() {
         const date = this.value;
         const teacher = document.getElementById("infoTeacherName").textContent;
@@ -419,13 +423,20 @@
             document.getElementById("popupOverlay").style.display = "block"; 
             document.getElementById("popup").style.display = "block";
         } 
-        // 🚨 [추가] 상담 신청/취소 시 상담 전용 모달 오픈
         else if (reas.includes("상담")) {
             const teacher = document.getElementById("infoTeacherName").textContent;
             if (teacher === "-" || teacher === "미배정 담임") return alert("담임 정보가 없습니다.");
             
             document.getElementById("modalTeacherName").textContent = teacher;
-            document.getElementById("consultDate").value = "";
+            
+            // 🚨 상담 날짜 목록 채우기
+            const dateSelect = document.getElementById("consultDate");
+            dateSelect.innerHTML = '<option value="">날짜를 선택하세요</option>';
+            validConsultDates.forEach(d => {
+                const opt = document.createElement("option"); opt.value = d; opt.textContent = d;
+                dateSelect.appendChild(opt);
+            });
+
             document.getElementById("consultTime").innerHTML = '<option value="">날짜를 먼저 선택하세요</option>';
             document.getElementById("counselingPopup").style.display = "block";
             document.getElementById("popupOverlay").style.display = "block";
@@ -434,7 +445,6 @@
         }
     });
 
-    // 🚨 [추가] 상담 모달 완료 버튼 클릭 시 최종 확인창으로 연결
     document.getElementById("consultModalSubmitBtn").onclick = function() {
         const date = document.getElementById("consultDate").value;
         const time = document.getElementById("consultTime").value;
@@ -467,9 +477,13 @@
         const s = document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
         const reas = document.getElementById("reason").value;
         const other = document.getElementById("otherReason").value;
-        const score = parseInt(document.getElementById("score").value)||null;
+        
+        // 🚨 점수 표시 오류 수정: 위반 사항(fixedScores에 있는 사유)일 때만 점수 전송, 상담 등은 null 전송
+        const rawScore = parseInt(document.getElementById("score").value);
+        const score = fixedScores[reas] ? rawScore : null; 
+
         const ret = document.getElementById("c_returnTime").textContent;
-        const customDate = document.getElementById("consultDate").value; // 상담인 경우 선택한 날짜 사용
+        const customDate = document.getElementById("consultDate").value; 
 
         submitMoveData(b, s, ret, reas, other, score, selectedTargetSeat, customDate);
         closeAllPopups();
@@ -479,14 +493,24 @@
 
     function submitMoveData(bld, sNum, ret, reas, other, score, target, customDate) {
         const now = new Date();
-        // 상담 예약인 경우 선택한 날짜, 아니면 오늘 날짜 사용
         const date = customDate || `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
         const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
         
         let finalReason = reas === "기타" ? other : reas;
         if (reas.includes("상담")) finalReason = `${reas} (${target} 선생님)`;
 
-        const data = { building: bld, seatNumber: sNum, returnTime: ret, reason: finalReason, score: score, inputDate: date, inputTime: time, targetSeat: target, studentName: studentNameMap[bld.replace("관","").trim()+sNum], teacherName: target };
+        const data = { 
+            building: bld, 
+            seatNumber: sNum, 
+            returnTime: ret, 
+            reason: finalReason, 
+            score: score, 
+            inputDate: date, 
+            inputTime: time, 
+            targetSeat: target, 
+            studentName: studentNameMap[bld.replace("관","").trim()+sNum], 
+            teacherName: target 
+        };
         
         if (reas.includes("심야자습")) {
             const key = bld.replace("관", "").trim() + sNum;
@@ -507,7 +531,11 @@
 
     function refreshMoveList() {
         const tbody = document.querySelector("#moveList tbody"); tbody.innerHTML = "";
-        moveList.forEach(m => { const r = document.createElement("tr"); r.innerHTML = `<td>${m.building}</td><td>${m.seatNumber}</td><td>${m.returnTime}</td><td>${m.displayReason || m.reason}</td><td>${m.inputDate}</td><td>${m.inputTime}</td><td>${m.score || '-'}</td>`; tbody.appendChild(r); });
+        moveList.forEach(m => { 
+            const r = document.createElement("tr"); 
+            r.innerHTML = `<td>${m.building}</td><td>${m.seatNumber}</td><td>${m.returnTime}</td><td>${m.displayReason || m.reason}</td><td>${m.inputDate}</td><td>${m.inputTime}</td><td>${m.score !== null ? m.score : '-'}</td>`; 
+            tbody.appendChild(r); 
+        });
     }
     function resetTable() { moveList = []; refreshMoveList(); }
     </script>
