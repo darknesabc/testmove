@@ -36,7 +36,6 @@
         .cancel-btn { background-color: #aaa !important; }
         .cancel-btn:hover { background-color: #888 !important; }
 
-        /* 시간 버튼 스타일 추가 */
         .time-btn { padding: 10px 15px; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; color: #333; font-weight: bold; transition: 0.2s; min-width: 80px; }
         .time-btn:hover { border-color: #336699; background: #e3effa; transform: translateY(-2px); }
         .time-btn.selected { background: #336699; color: white; border-color: #1a3a5c; }
@@ -45,7 +44,6 @@
         .confirm-info-box { text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #eee; }
         .confirm-info-box p { margin: 8px 0; font-size: 15px; }
 
-        /* 좌석표 스타일 */
         .seat-map-container { width: 100%; max-height: 480px; overflow: auto; margin-top: 15px; border: 1px solid #e0e0e0; padding: 20px; background: #f8f9fa; border-radius: 8px; display: none; box-sizing: border-box; }
         .seat-grid { display: grid; gap: 2px 4px; justify-content: center; width: max-content; margin: 0 auto; }
         .seat-cell { height: 24px; font-size: 11px; text-align: center; display: flex; align-items: center; justify-content: center; user-select: none; box-sizing: border-box; border-radius: 3px; transition: transform 0.1s, box-shadow 0.1s; }
@@ -216,8 +214,8 @@
     let selectedCounselingTime = ""; 
     let isCounselingCancel = false;  
     let globalScheduleData = null;   
-    let fpInstance = null; // 🚨 달력 인스턴스 저장용 변수
-    let currentColToDateMap = {}; // 🚨 날짜 텍스트를 인덱스와 매핑하는 객체
+    let fpInstance = null; 
+    let currentColToDateMap = {}; 
     
     let studentGenderMap = {}, studentNameMap = {}, studentTeacherMap = {}, userReservations = {}; 
 
@@ -262,7 +260,6 @@
         if (fixedScores[val]) document.getElementById("score").value = fixedScores[val];
     });
 
-    // 폼 제출 핸들러
     document.getElementById("moveForm").addEventListener("submit", function(e) {
         e.preventDefault();
         const b = document.getElementById("building").value; 
@@ -297,14 +294,12 @@
         }
     });
 
-    // 👨‍🏫 상담 팝업 제어 및 📅 Flatpickr 달력 생성
     function openCounselingPopup(teacherName, isCancel) {
         isCounselingCancel = isCancel;
         document.getElementById("counselingPopupTitle").textContent = isCancel ? "👨‍🏫 담임 선생님 상담 취소" : "👨‍🏫 담임 선생님 상담 신청";
         document.getElementById("counselingHelpText").textContent = isCancel ? "(본인이 신청한 시간만 나타납니다)" : "(신청 가능한 시간만 나타납니다)";
         document.getElementById("counselingTeacherName").textContent = teacherName;
         
-        // 달력 인풋 초기화
         const dateInput = document.getElementById("counselingDateSelect");
         dateInput.value = "";
         dateInput.placeholder = "달력 데이터 불러오는 중...";
@@ -321,7 +316,7 @@
             .then(data => {
                 if (data.error) throw new Error(data.error);
                 globalScheduleData = data;
-                initFlatpickr(data); // 🚨 달력 생성 함수 호출
+                initFlatpickr(data); 
             }).catch(err => {
                 alert("시간표 로드 실패: " + err.message);
                 document.getElementById("counselingPopup").style.display = "none";
@@ -329,7 +324,6 @@
             });
     }
 
-    // 🚨 Flatpickr 달력 로직 (가능한 날짜만 활성화)
     function initFlatpickr(data) {
         const key = document.getElementById("building").value.replace("관", "").trim() + document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
         const studentName = studentNameMap[key] || "미확인";
@@ -341,24 +335,24 @@
         const dates = data[1].slice(1);
         dates.forEach((d, index) => {
             const colIdx = index + 1;
-            let dateStr = String(d).split("T")[0]; // "2026-03-07"
+            let dateStr = String(d).split("T")[0]; 
             currentColToDateMap[dateStr] = colIdx;
 
             let hasSlots = false;
             for (let r = 2; r < data.length; r++) {
                 const cellValue = String(data[r][colIdx]).trim();
                 if (isCounselingCancel) {
-                    if (cellValue.includes(targetString)) hasSlots = true; // 취소모드: 내 이름이 적힌 곳만
+                    if (cellValue.includes(targetString)) hasSlots = true; 
                 } else {
-                    if (cellValue === "") hasSlots = true; // 신청모드: 빈칸만
+                    if (cellValue === "") hasSlots = true; 
                 }
             }
-            if (hasSlots) availableDates.push(dateStr); // 해당 날짜에 자리가 있으면 배열에 추가
+            if (hasSlots) availableDates.push(dateStr); 
         });
 
         const dateInput = document.getElementById("counselingDateSelect");
         
-        if (fpInstance) fpInstance.destroy(); // 기존 인스턴스 파괴
+        if (fpInstance) fpInstance.destroy(); 
         
         if (availableDates.length === 0) {
             dateInput.placeholder = isCounselingCancel ? "취소할 상담 내역이 없습니다." : "신청 가능한 날짜가 없습니다.";
@@ -369,19 +363,17 @@
         dateInput.placeholder = "여기를 클릭하여 달력을 여세요";
         dateInput.disabled = false;
 
-        // 달력 연결
         fpInstance = flatpickr("#counselingDateSelect", {
-            locale: "ko", // 한국어 설정
-            enable: availableDates, // 🚨 추출한 '가능한 날짜'들만 선택 가능하게 허용!
+            locale: "ko", 
+            enable: availableDates, 
             dateFormat: "Y-m-d",
-            disableMobile: "true", // 모바일 환경에서도 디자인 유지
+            disableMobile: "true", 
             onChange: function(selectedDates, dateStr) {
-                renderTimeSlots(currentColToDateMap[dateStr], dateStr); // 날짜 선택 시 시간표 렌더링
+                renderTimeSlots(currentColToDateMap[dateStr], dateStr); 
             }
         });
     }
 
-    // 시간 버튼 생성 로직
     function renderTimeSlots(colIdx, dateStr) {
         selectedCounselingDate = dateStr;
         selectedCounselingTime = "";
@@ -411,7 +403,7 @@
                 const btn = document.createElement("button");
                 btn.className = "time-btn";
                 btn.type = "button";
-                btn.textContent = timeLabel.split("~")[0].trim(); // 시작 시간만
+                btn.textContent = timeLabel.split("~")[0].trim(); 
                 
                 btn.onclick = function() {
                     Array.from(timeGrid.children).forEach(child => child.classList.remove("selected"));
@@ -441,11 +433,16 @@
         selectedTargetSeat = teacher; 
     };
 
-    // 공통 백엔드 전송 함수
+    // 🚨 여기서 시간을 무조건 KST(한국 표준시)로 변환하도록 수정했습니다!
     function submitMoveData(bld, sNum, ret, reas, other, score, target, cDate) {
-        const now = new Date();
-        const date = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-        const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+        // 클라이언트 시간과 무관하게 KST 시간 구하기
+        const curr = new Date();
+        const utc = curr.getTime() + (curr.getTimezoneOffset() * 60000);
+        const kstNow = new Date(utc + (9 * 3600000)); // UTC + 9시간 (한국시간)
+
+        const date = `${kstNow.getFullYear()}-${String(kstNow.getMonth()+1).padStart(2,'0')}-${String(kstNow.getDate()).padStart(2,'0')}`;
+        const time = `${String(kstNow.getHours()).padStart(2,'0')}:${String(kstNow.getMinutes()).padStart(2,'0')}:${String(kstNow.getSeconds()).padStart(2,'0')}`;
+        
         const cleanR = reas === "기타" ? other : reas;
         const key = bld.replace("관", "").trim() + sNum;
         const studentName = studentNameMap[key] || "미확인";
@@ -536,4 +533,3 @@
     </script>
 </body>
 </html>
-
