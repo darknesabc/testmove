@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>러셀 테스트 이동일지 작성</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
+
     <style>
         body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; text-align: center; margin: 20px; background-color: #f4f7f6; }
         h1 { color: #336699; font-size: 24px; }
@@ -63,7 +68,8 @@
             <option value="">선택하세요</option>
             <option value="4-1관">4-1관</option><option value="4-2관">4-2관</option>
             <option value="4-3관">4-3관</option><option value="4-4관">4-4관</option>
-            <option value="4-5관">4-5관</option>
+            <option value="4-5관">4-5관</option><option value="5-1관">5-1관</option>
+            <option value="6-1관">6-1관</option><option value="7-1관">7-1관</option>
         </select>
 
         <label for="seatNumber">좌석번호 (본인):</label>
@@ -75,7 +81,6 @@
                     <option value="C">C</option><option value="D">D</option>
                     <option value="F">F</option><option value="G">G</option>
                     <option value="H">H</option><option value="I">I</option>
-                    <option value="J">J</option><option value="K">K</option>
                 </optgroup>
             </select>
             <select id="seatNumber2" required style="margin-bottom: 0;">
@@ -84,7 +89,8 @@
                     <option value="01">01</option><option value="02">02</option><option value="03">03</option>
                     <option value="04">04</option><option value="05">05</option><option value="06">06</option>
                     <option value="07">07</option><option value="08">08</option><option value="09">09</option>
-                    <option value="10">10</option><option value="11">11</option>
+                    <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+                    <option value="13">13</option><option value="14">14</option><option value="15">15</option>
                 </optgroup>
             </select>
         </div>
@@ -174,9 +180,7 @@
             
             <div style="background-color: #f1f5f9; padding: 15px; border-radius: 8px; text-align: left; margin-bottom: 15px;">
                 <label for="counselingDateSelect" style="display:inline-block; font-weight:bold; margin-right:10px;">📅 날짜 선택:</label>
-                <select id="counselingDateSelect" style="width: 200px; padding: 8px; display: inline-block; border-radius:4px; border:1px solid #ccc;">
-                    <option value="">날짜를 선택하세요</option>
-                </select>
+                <input type="text" id="counselingDateSelect" placeholder="달력에서 날짜를 선택하세요" style="width: 200px; padding: 8px; display: inline-block; border-radius:4px; border:1px solid #ccc; background-color:#fff; cursor:pointer;" readonly>
             </div>
 
             <div id="counselingTimeContainer" style="display:none; text-align:left; padding: 10px 0;">
@@ -185,7 +189,7 @@
                     </div>
             </div>
 
-            <p id="selectedTimeText" style="margin-top: 15px; font-weight:bold; color:#d9534f;">날짜와 시간을 선택해주세요.</p>
+            <p id="selectedTimeText" style="margin-top: 15px; font-weight:bold; color:#d9534f;">달력에서 날짜를 먼저 선택해주세요.</p>
             <div class="popup-buttons">
                 <button id="counselingSubmitButton">최종 제출</button>
                 <button id="counselingCancelButton" class="cancel-btn">취소</button>
@@ -209,10 +213,12 @@
     <script>
     let moveList = [];
     let selectedTargetSeat = ""; 
-    let selectedCounselingDate = ""; // 상담 날짜 저장
-    let selectedCounselingTime = ""; // 상담 시간 저장
-    let isCounselingCancel = false;  // 취소 모드 여부
-    let globalScheduleData = null;   // 선생님 시간표 데이터 임시저장
+    let selectedCounselingDate = ""; 
+    let selectedCounselingTime = ""; 
+    let isCounselingCancel = false;  
+    let globalScheduleData = null;   
+    let fpInstance = null; // 🚨 달력 인스턴스 저장용 변수
+    let currentColToDateMap = {}; // 🚨 날짜 텍스트를 인덱스와 매핑하는 객체
     
     let studentGenderMap = {}, studentNameMap = {}, studentTeacherMap = {}, userReservations = {}; 
 
@@ -292,25 +298,31 @@
         }
     });
 
-    // 👨‍🏫 상담 팝업 제어
+    // 👨‍🏫 상담 팝업 제어 및 📅 Flatpickr 달력 생성
     function openCounselingPopup(teacherName, isCancel) {
         isCounselingCancel = isCancel;
         document.getElementById("counselingPopupTitle").textContent = isCancel ? "👨‍🏫 담임 선생님 상담 취소" : "👨‍🏫 담임 선생님 상담 신청";
         document.getElementById("counselingHelpText").textContent = isCancel ? "(본인이 신청한 시간만 나타납니다)" : "(신청 가능한 시간만 나타납니다)";
         document.getElementById("counselingTeacherName").textContent = teacherName;
-        document.getElementById("counselingDateSelect").innerHTML = '<option value="">데이터 불러오는 중...</option>';
+        
+        // 달력 인풋 초기화
+        const dateInput = document.getElementById("counselingDateSelect");
+        dateInput.value = "";
+        dateInput.placeholder = "달력 데이터 불러오는 중...";
+        dateInput.disabled = true;
+
         document.getElementById("counselingTimeContainer").style.display = "none";
         document.getElementById("popupOverlay").style.display = "block";
         document.getElementById("counselingPopup").style.display = "block";
         selectedCounselingDate = ""; selectedCounselingTime = "";
-        document.getElementById("selectedTimeText").textContent = "날짜와 시간을 선택해주세요.";
+        document.getElementById("selectedTimeText").textContent = "달력에서 날짜를 먼저 선택해주세요.";
 
         fetch(`${SCRIPT_URL}?action=getTeacherSchedule&teacherName=${encodeURIComponent(teacherName)}`)
             .then(res => res.json())
             .then(data => {
                 if (data.error) throw new Error(data.error);
                 globalScheduleData = data;
-                populateCounselingDates(data);
+                initFlatpickr(data); // 🚨 달력 생성 함수 호출
             }).catch(err => {
                 alert("시간표 로드 실패: " + err.message);
                 document.getElementById("counselingPopup").style.display = "none";
@@ -318,23 +330,61 @@
             });
     }
 
-    function populateCounselingDates(data) {
-        const dateSelect = document.getElementById("counselingDateSelect");
-        dateSelect.innerHTML = '<option value="">날짜를 선택하세요</option>';
+    // 🚨 Flatpickr 달력 로직 (가능한 날짜만 활성화)
+    function initFlatpickr(data) {
+        const key = document.getElementById("building").value.replace("관", "").trim() + document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
+        const studentName = studentNameMap[key] || "미확인";
+        const targetString = `상담(${studentName})`;
+
+        let availableDates = [];
+        currentColToDateMap = {};
+
         const dates = data[1].slice(1);
         dates.forEach((d, index) => {
-            let dateStr = String(d).split("T")[0]; // 시간 제거
-            const option = document.createElement("option");
-            option.value = index + 1; // 배열의 열 인덱스 저장
-            option.textContent = dateStr;
-            dateSelect.appendChild(option);
+            const colIdx = index + 1;
+            let dateStr = String(d).split("T")[0]; // "2026-03-07"
+            currentColToDateMap[dateStr] = colIdx;
+
+            let hasSlots = false;
+            for (let r = 2; r < data.length; r++) {
+                const cellValue = String(data[r][colIdx]).trim();
+                if (isCounselingCancel) {
+                    if (cellValue.includes(targetString)) hasSlots = true; // 취소모드: 내 이름이 적힌 곳만
+                } else {
+                    if (cellValue === "") hasSlots = true; // 신청모드: 빈칸만
+                }
+            }
+            if (hasSlots) availableDates.push(dateStr); // 해당 날짜에 자리가 있으면 배열에 추가
+        });
+
+        const dateInput = document.getElementById("counselingDateSelect");
+        
+        if (fpInstance) fpInstance.destroy(); // 기존 인스턴스 파괴
+        
+        if (availableDates.length === 0) {
+            dateInput.placeholder = isCounselingCancel ? "취소할 상담 내역이 없습니다." : "신청 가능한 날짜가 없습니다.";
+            dateInput.disabled = true;
+            return;
+        }
+
+        dateInput.placeholder = "여기를 클릭하여 달력을 여세요";
+        dateInput.disabled = false;
+
+        // 달력 연결
+        fpInstance = flatpickr("#counselingDateSelect", {
+            locale: "ko", // 한국어 설정
+            enable: availableDates, // 🚨 추출한 '가능한 날짜'들만 선택 가능하게 허용!
+            dateFormat: "Y-m-d",
+            disableMobile: "true", // 모바일 환경에서도 디자인 유지
+            onChange: function(selectedDates, dateStr) {
+                renderTimeSlots(currentColToDateMap[dateStr], dateStr); // 날짜 선택 시 시간표 렌더링
+            }
         });
     }
 
-    // 날짜 선택 시 해당 날짜의 시간 버튼들을 그려줌
-    document.getElementById("counselingDateSelect").addEventListener("change", function() {
-        const colIdx = this.value;
-        selectedCounselingDate = this.options[this.selectedIndex].text;
+    // 시간 버튼 생성 로직
+    function renderTimeSlots(colIdx, dateStr) {
+        selectedCounselingDate = dateStr;
         selectedCounselingTime = "";
         document.getElementById("selectedTimeText").textContent = "시간을 선택해주세요.";
         
@@ -346,23 +396,23 @@
         
         const key = document.getElementById("building").value.replace("관", "").trim() + document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
         const studentName = studentNameMap[key] || "미확인";
-        const targetString = `상담(${studentName})`; // 취소할 때 찾을 단어
+        const targetString = `상담(${studentName})`;
 
         let hasSlots = false;
         for (let r = 2; r < globalScheduleData.length; r++) {
-            const timeLabel = globalScheduleData[r][0]; // "18:40 ~ 19:00"
+            const timeLabel = globalScheduleData[r][0];
             const cellValue = String(globalScheduleData[r][colIdx]).trim();
             
             let canShow = false;
-            if (isCounselingCancel) { if (cellValue.includes(targetString)) canShow = true; } // 취소: 내 이름이 있는 칸만
-            else { if (cellValue === "") canShow = true; } // 신청: 빈 칸만
+            if (isCounselingCancel) { if (cellValue.includes(targetString)) canShow = true; }
+            else { if (cellValue === "") canShow = true; }
 
             if (canShow) {
                 hasSlots = true;
                 const btn = document.createElement("button");
                 btn.className = "time-btn";
                 btn.type = "button";
-                btn.textContent = timeLabel.split("~")[0].trim(); // 시작 시간만 표시 (예: 18:40)
+                btn.textContent = timeLabel.split("~")[0].trim(); // 시작 시간만
                 
                 btn.onclick = function() {
                     Array.from(timeGrid.children).forEach(child => child.classList.remove("selected"));
@@ -373,8 +423,8 @@
                 timeGrid.appendChild(btn);
             }
         }
-        if (!hasSlots) timeGrid.innerHTML = `<span style="color:#666; font-size:14px;">선택한 날짜에 ${isCounselingCancel ? '취소할 상담 내역이' : '신청 가능한 시간이'} 없습니다.</span>`;
-    });
+        if (!hasSlots) timeGrid.innerHTML = `<span style="color:#666; font-size:14px;">선택한 날짜에 가능한 시간이 없습니다.</span>`;
+    }
 
     document.getElementById("counselingSubmitButton").onclick = function() {
         if (!selectedCounselingTime) { alert("상담 시간을 선택해주세요!"); return; }
