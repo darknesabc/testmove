@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>러셀 이동일지 및 교육점수 작성</title>
+    <title>러셀 테스트 이동일지 작성</title>
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -20,18 +21,14 @@
         button:hover { background-color: #28597b; }
         #resetButton { margin: 10px 0 20px 0; float: left; width: auto; padding: 8px 16px; background-color: #999; cursor: pointer; border-radius: 6px; font-size: 14px; }
         #resetButton:hover { background-color: #777; }
-        
         table { margin: 20px auto; border-collapse: collapse; width: 100%; max-width: 800px; border-radius: 8px; overflow: hidden; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         th, td { border: 1px solid #eee; padding: 12px; text-align: center; }
         thead { background-color: #336699; color: white; font-weight: bold; }
         tbody tr:nth-child(even) { background-color: #f9f9f9; }
         tbody tr:hover { background-color: #f1f5f9; }
-        
-        .error { color: red; margin-top: 10px; display: none; font-weight: bold; font-size: 14px; }
         .score { display: none; }
 
-        /* 팝업 관련 CSS */
-        .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 95%; max-width: 500px; background-color: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); z-index: 1000; padding: 25px; box-sizing: border-box; }
+        .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 95%; max-width: 850px; background-color: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); z-index: 1000; padding: 25px; box-sizing: border-box; }
         .popup-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 999; }
         .popup-content { text-align: center; }
         .popup h2 { margin-top: 0; margin-bottom: 10px; color: #336699; }
@@ -48,11 +45,16 @@
         .confirm-info-box { text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #eee; }
         .confirm-info-box p { margin: 8px 0; font-size: 15px; }
 
-        @media (max-width: 768px) {
-            form { padding: 15px; }
-            button { width: 100%; }
-            table, th, td { font-size: 14px; }
-        }
+        .seat-map-container { width: 100%; max-height: 480px; overflow: auto; margin-top: 15px; border: 1px solid #e0e0e0; padding: 20px; background: #f8f9fa; border-radius: 8px; display: none; box-sizing: border-box; }
+        .seat-grid { display: grid; gap: 2px 4px; justify-content: center; width: max-content; margin: 0 auto; }
+        .seat-cell { height: 24px; font-size: 11px; text-align: center; display: flex; align-items: center; justify-content: center; user-select: none; box-sizing: border-box; border-radius: 3px; transition: transform 0.1s, box-shadow 0.1s; }
+        .seat-cell.seat { background-color: #ffffff; border: 1px solid #b3bccc; cursor: pointer; color: #333; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .seat-cell.seat:hover { background-color: #e3effa; border-color: #336699; transform: translateY(-1px); }
+        .seat-cell.seat.selected { background-color: #336699; color: white; border-color: #1a3a5c; box-shadow: 0 0 8px rgba(51, 102, 153, 0.6); }
+        .seat-cell.seat.reserved { background-color: #ffeded; color: #d9534f; border-color: #ffcccc; cursor: not-allowed; pointer-events: none; text-decoration: line-through; }
+        .seat-cell.seat.disabled { background-color: #f2f2f2; color: #c0c0c0; border-color: #e0e0e0; cursor: not-allowed; box-shadow: none; pointer-events: none; }
+        .seat-cell.aisle { background-color: #7a7a7a; border-radius: 0; border: none; width: 100%; height: 100%; transform: scaleY(1.2); z-index: 1; pointer-events: none; }
+        .seat-cell.empty { background-color: transparent; border: none; padding: 0; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -63,10 +65,8 @@
         <label for="building">관 (본인):</label>
         <select id="building" required>
             <option value="">선택하세요</option>
-            <option value="4-1관">4-1관</option>
-            <option value="4-2관">4-2관</option>
-            <option value="4-3관">4-3관</option>
-            <option value="4-4관">4-4관</option>
+            <option value="4-1관">4-1관</option><option value="4-2관">4-2관</option>
+            <option value="4-3관">4-3관</option><option value="4-4관">4-4관</option>
             <option value="4-5관">4-5관</option>
         </select>
 
@@ -75,10 +75,11 @@
             <select id="seatNumber" required style="margin-bottom: 0;">
                 <option value="">알파벳</option>
                 <optgroup label="A~K">
-                    <option value="A">A</option><option value="B">B</option><option value="C">C</option>
-                    <option value="D">D</option><option value="F">F</option><option value="G">G</option>
-                    <option value="H">H</option><option value="I">I</option><option value="J">J</option>
-                    <option value="K">K</option>
+                    <option value="A">A</option><option value="B">B</option>
+                    <option value="C">C</option><option value="D">D</option>
+                    <option value="F">F</option><option value="G">G</option>
+                    <option value="H">H</option><option value="I">I</option>
+                    <option value="J">J</option><option value="K">K</option>
                 </optgroup>
             </select>
             <select id="seatNumber2" required style="margin-bottom: 0;">
@@ -101,33 +102,23 @@
                 <option value="상담 취소">상담 취소</option>
             </optgroup>
             <optgroup label="일반 이동">
-                <option value="화장실/정수기">화장실/정수기</option>
-                <option value="대기자습실 이동">대기자습실 이동</option>
-                <option value="튜터 질의응답">튜터 질의응답</option>
-                <option value="외부 학원/과외/보충">외부 학원/과외/보충</option>
-                <option value="내부 학원/보충">내부 학원/보충</option>
-                <option value="자료수령">자료수령</option>
-                <option value="가족 행사">가족 행사</option>
-                <option value="병원">병원</option>
-                <option value="식사">식사</option>
-                <option value="기타">기타</option>
+                <option value="화장실/정수기">화장실/정수기</option><option value="튜터 질의응답">튜터 질의응답</option>
+                <option value="외부 학원/과외/보충">외부 학원/과외/보충</option><option value="자료수령">자료수령</option>
+                <option value="가족 행사">가족 행사</option><option value="병원">병원</option>
+                <option value="식사">식사</option><option value="기타">기타</option>
                 <option value="조퇴(컨디션난조)">조퇴(컨디션난조)</option>
             </optgroup>
+            <optgroup label="심야자습">
+                <option value="심야자습 신청">심야자습 신청</option><option value="심야자습 취소">심야자습 취소</option>
+            </optgroup>
             <optgroup label="규정 위반/지도">
-                <option value="지각">지각</option>
-                <option value="자습 중 이동 태블릿 미입력">자습 중 이동 태블릿 미입력</option>
-                <option value="입/퇴실 미준수">입/퇴실 미준수</option>
-                <option value="취침강제하원(7회)">취침강제하원(7회)</option>
+                <option value="지각">지각</option><option value="입/퇴실 미준수">입/퇴실 미준수</option>
+                <option value="핸드폰 미제출">핸드폰 미제출</option><option value="전자기기 무단사용">전자기기 무단사용</option>
+                <option value="핸드폰 무단사용">핸드폰 무단사용</option><option value="무단이탈">무단이탈</option>
+                <option value="타층/타관 무단출입">타층/타관 무단출입</option><option value="핸드폰/Wifi 무단반입">핸드폰/Wifi 무단반입</option>
+                <option value="무단결석">무단결석</option><option value="원내대화">원내대화</option>
+                <option value="무단지각">무단지각</option><option value="취침강제하원">취침강제하원</option>
                 <option value="음식물섭취">음식물섭취</option>
-                <option value="무단지각">무단지각</option>
-                <option value="원내대화">원내대화</option>
-                <option value="타층/타관 무단출입">타층/타관 무단출입</option>
-                <option value="모의고사 무단 1회 미응시">모의고사 무단 1회 미응시</option>
-                <option value="무단이탈">무단이탈</option>
-                <option value="무단결석">무단결석</option>
-                <option value="핸드폰 미제출">핸드폰 미제출</option>
-                <option value="핸드폰 무단사용">핸드폰 무단사용</option>
-                <option value="전자기기 부정사용">전자기기 부정사용</option>
             </optgroup>
         </select>
 
@@ -139,26 +130,23 @@
         <div id="scoreDiv" class="score">
             <label for="score">점수 (1~10점):</label>
             <select id="score">
-                <option value="1">1점</option><option value="2">2점</option>
-                <option value="3">3점</option><option value="4">4점</option>
-                <option value="5">5점</option><option value="6">6점</option>
-                <option value="7">7점</option><option value="8">8점</option>
-                <option value="9">9점</option><option value="10">10점</option>
+                <option value="1">1점</option><option value="2">2점</option><option value="3">3점</option>
+                <option value="4">4점</option><option value="5">5점</option><option value="6">6점</option>
+                <option value="7">7점</option><option value="8">8점</option><option value="9">9점</option>
+                <option value="10">10점</option>
             </select>
         </div>
-
         <label for="otherReason" id="otherReasonLabel" style="display:none;">기타 사유:</label>
-        <textarea id="otherReason" placeholder="기타 사유를 입력하세요" style="display:none; height: 80px;"></textarea>
-        <div class="error" id="errorMessage">기타 사유를 입력해주세요.</div>
+        <textarea id="otherReason" placeholder="내용을 입력하세요" style="display:none; height: 80px;"></textarea>
 
-        <button type="submit" style="margin-top: 10px;">제출</button>
+        <button type="submit">제출</button>
     </form>
 
     <div id="result">
         <table id="moveList">
             <thead>
                 <tr>
-                    <th>관</th><th>좌석번호</th><th>이동사유</th><th>복귀교시</th><th>날짜</th><th>시간</th><th>점수</th>
+                    <th>관</th><th>좌석번호</th><th>복귀교시</th><th>이동사유</th><th>입력날짜</th><th>입력시간</th><th>점수</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -167,7 +155,23 @@
 
     <div id="popupOverlay" class="popup-overlay"></div>
 
-    <div id="counselingPopup" class="popup">
+    <div id="popup" class="popup">
+        <div class="popup-content">
+            <h2 id="popupTitle">🌙 심야자습 좌석 선택</h2>
+            <p style="font-size: 14px; color: #555; margin-bottom: 15px;">본인 좌석: <span id="popupOriginalSeat" style="font-weight:bold; color:#336699;"></span> &nbsp;|&nbsp; 희망교시: <span id="popupReturnTime" style="font-weight:bold;"></span></p>
+            <div style="background-color: #f1f5f9; padding: 15px; border-radius: 8px; text-align: left; margin-bottom: 15px;">
+                <label for="modalBuilding" style="display:inline-block; width: auto; margin:0 10px 0 0;">📌 이동할 관 선택:</label>
+                <select id="modalBuilding" style="width: 200px; padding: 8px; margin: 0; display: inline-block;">
+                    <option value="">선택하세요</option><option value="7-1관">7-1관</option>
+                </select>
+                <span id="selectedTargetText" style="margin-left: 15px; font-weight:bold; color:#d9534f;">관을 선택해주세요.</span>
+            </div>
+            <div id="seatMapContainer" class="seat-map-container"><div id="seatGrid" class="seat-grid"></div></div>
+            <div class="popup-buttons"><button id="popupSubmitButton">최종 제출</button><button id="popupCancelButton" class="cancel-btn">취소</button></div>
+        </div>
+    </div>
+
+    <div id="counselingPopup" class="popup" style="max-width: 500px;">
         <div class="popup-content">
             <h2 id="counselingPopupTitle">👨‍🏫 담임 선생님 상담</h2>
             <p style="margin-bottom: 15px; font-size: 15px;">담임 선생님: <span id="counselingTeacherName" style="font-weight:bold; color:#336699;"></span></p>
@@ -178,7 +182,7 @@
             </div>
 
             <div id="counselingTimeContainer" style="display:none; text-align:left; padding: 10px 0;">
-                <p style="font-weight:bold; margin-bottom:10px;">⏰ 시간 선택</p>
+                <p style="font-weight:bold; margin-bottom:10px;">⏰ 시간 선택 <span id="counselingHelpText" style="font-size:12px; color:#666; font-weight:normal;"></span></p>
                 <div id="counselingTimeGrid" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
             </div>
 
@@ -199,10 +203,7 @@
                 <p>⏰ <b>이용 교시/시간:</b> <span id="c_returnTime"></span></p>
             </div>
             <p style="color:#d9534f; font-weight:bold;">위 내용이 정확합니까?</p>
-            <div class="popup-buttons">
-                <button id="finalYesButton" style="background-color: #274e13;">네, 신청합니다</button>
-                <button id="finalNoButton" class="cancel-btn">아니오</button>
-            </div>
+            <div class="popup-buttons"><button id="finalYesButton" style="background-color: #274e13;">네, 신청합니다</button><button id="finalNoButton" class="cancel-btn">아니오</button></div>
         </div>
     </div>
 
@@ -215,31 +216,10 @@
     let globalScheduleData = null;   
     let fpInstance = null; 
     let currentColToDateMap = {}; 
-    let studentNameMap = {}, studentTeacherMap = {}; 
+    let studentGenderMap = {}, studentNameMap = {}, studentTeacherMap = {}, userReservations = {}; 
 
-    // 🚨 이전 채팅에서 통합해 드린 최신 Google Apps Script 웹앱 URL을 입력하세요.
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYJ_wZv0U63C7_S44sNdzHJcSc5ftD1uNZOC-nNhL7Mm--NdV0ZZ6PRKjoW3m07vAs/exec";
 
-    // ✅ 기존 코드의 규정 위반 점수 체계 유지
-    const fixedScores = {
-        "지각": 1, 
-        "자습 중 이동 태블릿 미입력": 1,
-        "입/퇴실 미준수": 3, 
-        "음식물섭취": 3, 
-        "취침강제하원(7회)": 3,
-        "무단지각": 5, 
-        "타층/타관 무단출입": 5, 
-        "원내대화": 5, 
-        "모의고사 무단 1회 미응시": 5,
-        "무단이탈": 7, 
-        "무단결석": 7, 
-        "핸드폰 미제출": 7, 
-        "핸드폰 무단사용": 7,
-        "전자기기 부정사용": 10
-    };
-    const scoreReasons = Object.keys(fixedScores);
-
-    // 자동 자정 새로고침
     function refreshAtMidnight() {
         const now = new Date();
         const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -250,92 +230,81 @@
         setTimeout(function() { location.reload(); }, timeToMidnight);
     }
 
-    // 초기 로드 시 학생/선생님 정보 가져오기
     window.onload = function() {
         refreshAtMidnight();
-        fetch(SCRIPT_URL + "?action=getGenderMap&t=" + new Date().getTime())
-            .then(res => res.json())
-            .then(data => {
-                studentNameMap = data.nameMap || {};
-                studentTeacherMap = data.teacherMap || {}; 
-                resetReturnTimeOptions();
-            }).catch(err => console.error("통신 오류"));
+        fetch(SCRIPT_URL + "?action=getGenderMap&t=" + new Date().getTime()).then(res => res.json()).then(data => {
+            studentGenderMap = data.genderMap || {}; 
+            studentNameMap = data.nameMap || {};
+            studentTeacherMap = data.teacherMap || {}; 
+            userReservations = data.userReservations || {}; 
+            setReturnTimeOptionsForNightStudy(false);
+        }).catch(err => console.error("통신 오류"));
+    };
+
+    const seatData = {
+        "7-1관": [
+            ["7-1A01", "7-1B01", "", "7-1C01", "7-1D01", "", "7-1F01", "7-1G01"], ["7-1A02", "7-1B02", "", "7-1C02", "7-1D02", "", "7-1F02", "7-1G02"], ["7-1A03", "7-1B03", "", "7-1C03", "7-1D03", "", "7-1F03", "7-1G03"], ["7-1A04", "7-1B04", "", "7-1C04", "7-1D04", "", "7-1F04", "7-1G04"], ["7-1A05", "7-1B05", "", "7-1C05", "7-1D05", "", "7-1F05", "7-1G05"], ["7-1A06", "7-1B06", "", "7-1C06", "7-1D06", "", "7-1F06", "7-1G06"], ["7-1A07", "7-1B07", "", "7-1C07", "7-1D07", "", "7-1F07", "7-1G07"], ["7-1A08", "7-1B08", "", "7-1C08", "7-1D08", "", "7-1F08", ""], ["7-1A09", "7-1B09", "", "7-1C09", "7-1D09", "", "7-1F09", ""], ["7-1A10", "7-1B10", "", "7-1C10", "7-1D10", "", "7-1F10", ""], ["7-1A11", "7-1B11", "", "7-1C11", "7-1D11", "", "7-1F11", ""], ["7-1A12", "7-1B12", "", "7-1C12", "7-1D12", "", "7-1F12", ""], ["7-1A13", "7-1B13", "", "7-1C13", "7-1D13", "", "7-1F13", ""], ["", "7-1B14", "", "7-1C14", "7-1D14", "", "7-1F14", ""], ["", "7-1B15", "", "7-1C15", "7-1D15", "", "7-1F15", ""], ["", "", "", "7-1C16", "7-1D16", "", "7-1F16", ""], ["", "", "", "", "", "", "", ""], ["1 페이지", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "출입문"], ["", "", "", "", "", "", "", ""], ["", "", "", "7-1C34", "7-1D34", "", "7-1F34", "7-1G34"], ["", "", "", "7-1C33", "7-1D33", "", "7-1F33", "7-1G33"], ["", "7-1B32", "", "7-1C32", "7-1D32", "", "7-1F32", "7-1G32"], ["", "7-1B31", "", "7-1C31", "7-1D31", "", "7-1F31", "7-1G31"], ["", "7-1B30", "", "7-1C30", "7-1D30", "", "7-1F30", "7-1G30"], ["7-1A29", "7-1B29", "", "7-1C29", "7-1D29", "", "7-1F29", "7-1G29"], ["7-1A28", "7-1B28", "", "7-1C28", "7-1D28", "", "7-1F28", "7-1G28"], ["7-1A27", "7-1B27", "", "7-1C27", "7-1D27", "", "7-1F27", "7-1G27"], ["7-1A26", "7-1B26", "", "7-1C26", "7-1D26", "", "7-1F26", "7-1G26"], ["7-1A25", "7-1B25", "", "7-1C25", "7-1D25", "", "7-1F25", "7-1G25"], ["7-1A24", "7-1B24", "", "7-1C24", "7-1D24", "", "7-1F24", "7-1G24"], ["7-1A23", "7-1B23", "", "7-1C23", "7-1D23", "", "7-1F23", "7-1G23"], ["7-1A22", "7-1B22", "", "7-1C22", "7-1D22", "", "7-1F22", "7-1G22"], ["7-1A21", "7-1B21", "", "7-1C21", "7-1D21", "", "7-1F21", "7-1G21"]
+        ]
     };
 
     const returnTimeSelect = document.getElementById("returnTime");
-
-    function resetReturnTimeOptions() {
-        returnTimeSelect.innerHTML = `
-            <option value="">선택하세요</option>
-            <option value="1">1교시</option><option value="2">2교시</option>
-            <option value="3">3교시</option><option value="4">4교시</option>
-            <option value="5">5교시</option><option value="6">6교시</option>
-            <option value="7">7교시</option><option value="8">8교시</option>
-            <option value="복귀안함">복귀안함</option>`;
+    function setReturnTimeOptionsForNightStudy(isNightStudy) {
+        if (isNightStudy) returnTimeSelect.innerHTML = `<option value="">선택하세요</option><option value="9">9교시</option><option value="10">10교시</option>`;
+        else returnTimeSelect.innerHTML = `<option value="">선택하세요</option><option value="1">1교시</option><option value="2">2교시</option><option value="3">3교시</option><option value="4">4교시</option><option value="5">5교시</option><option value="6">6교시</option><option value="7">7교시</option><option value="8">8교시</option><option value="복귀안함">복귀안함</option>`;
     }
 
-    // 이동사유 선택 시 로직
+    const fixedScores = { "지각":1,"입/퇴실 미준수":3,"핸드폰 미제출":10,"전자기기 무단사용":10,"핸드폰 무단사용":7,"무단이탈":10,"타층/타관 무단출입":5,"핸드폰/Wifi 무단반입":10,"무단결석":7,"원내대화":5,"무단지각":5,"취침강제하원":3,"음식물섭취":3 };
+
     document.getElementById("reason").addEventListener("change", function() {
         const val = this.value; 
-
-        if (val.includes("상담")) {
-            returnTimeSelect.innerHTML = `<option value="상담시간선택">시간 선택 팝업에서 진행</option>`;
-        } else {
-            resetReturnTimeOptions();
-        }
-
-        const isScoreReason = scoreReasons.includes(val);
-        document.getElementById("scoreDiv").style.display = isScoreReason ? "block" : "none";
-        
-        if (val === "기타") {
-            document.getElementById("otherReason").style.display = "block";
-            document.getElementById("otherReasonLabel").style.display = "block";
-            document.getElementById("errorMessage").style.display = "none";
-        } else {
-            document.getElementById("otherReason").style.display = "none";
-            document.getElementById("otherReasonLabel").style.display = "none";
-            document.getElementById("errorMessage").style.display = "none";
-        }
-
-        if (fixedScores[val]) {
-            document.getElementById("score").value = fixedScores[val];
-        }
+        const isNS = (val === "심야자습 신청" || val === "심야자습 취소");
+        setReturnTimeOptionsForNightStudy(isNS);
+        document.getElementById("scoreDiv").style.display = fixedScores[val] ? "block" : "none";
+        if (val.includes("상담")) returnTimeSelect.innerHTML = `<option value="상담시간선택">시간 선택 팝업에서 진행</option>`;
+        if (val === "기타") { document.getElementById("otherReason").style.display = "block"; document.getElementById("otherReasonLabel").style.display = "block"; } 
+        else { document.getElementById("otherReason").style.display = "none"; document.getElementById("otherReasonLabel").style.display = "none"; }
+        if (fixedScores[val]) document.getElementById("score").value = fixedScores[val];
     });
 
-    // 폼 제출 시 로직
     document.getElementById("moveForm").addEventListener("submit", function(e) {
         e.preventDefault();
-        
         const b = document.getElementById("building").value; 
         const s1 = document.getElementById("seatNumber").value; 
         const s2 = document.getElementById("seatNumber2").value;
         const ret = document.getElementById("returnTime").value; 
         const reas = document.getElementById("reason").value;
-        const otherReason = document.getElementById("otherReason").value;
         const key = b.replace("관", "").trim() + s1 + s2;
 
-        if (reas === "기타" && !otherReason.trim()) {
-            document.getElementById("errorMessage").style.display = "block";
-            return;
-        }
-
-        if (reas.includes("상담")) {
+        if (reas.includes("심야자습")) {
+            if (!studentGenderMap[key]) { alert("등록되지 않은 좌석입니다."); return; }
+            if (reas === "심야자습 신청" && userReservations[key]) { alert(`이미 자리를 신청하셨습니다. (${userReservations[key]})`); return; }
+            if (reas === "심야자습 취소" && !userReservations[key]) { alert("신청 내역이 없습니다."); return; }
+            if (!ret) { alert("복귀 교시를 선택해주세요."); return; }
+            document.getElementById("popupTitle").textContent = reas;
+            document.getElementById("popupOriginalSeat").textContent = `${b} ${s1}${s2}`;
+            document.getElementById("popupReturnTime").textContent = ret + "교시";
+            document.getElementById("modalBuilding").value = ""; 
+            document.getElementById("seatMapContainer").style.display = "none";
+            document.getElementById("popupOverlay").style.display = "block"; 
+            document.getElementById("popup").style.display = "block";
+        } 
+        else if (reas.includes("상담")) {
             const teacherName = studentTeacherMap[key];
             if (!teacherName) { alert("학생의 담임 선생님 정보를 찾을 수 없습니다."); return; }
             openCounselingPopup(teacherName, reas === "상담 취소");
-        } else {
-            const score = scoreReasons.includes(reas) ? parseInt(document.getElementById("score").value) : null;
-            submitMoveData(b, s1+s2, ret, reas, otherReason, score, "", "");
+        }
+        else {
+            const isScoreReason = fixedScores[reas] ? true : false;
+            submitMoveData(b, s1+s2, ret, reas, document.getElementById("otherReason").value, isScoreReason ? parseInt(document.getElementById("score").value) : null, "", "");
         }
     });
 
-    // 상담 팝업 열기
     function openCounselingPopup(teacherName, isCancel) {
         isCounselingCancel = isCancel;
         document.getElementById("counselingPopupTitle").textContent = isCancel ? "👨‍🏫 담임 선생님 상담 취소" : "👨‍🏫 담임 선생님 상담 신청";
         document.getElementById("counselingTeacherName").textContent = teacherName;
         const dateInput = document.getElementById("counselingDateSelect");
-        dateInput.value = ""; dateInput.placeholder = "데이터 불러오는 중..."; dateInput.disabled = true;
+        dateInput.value = ""; dateInput.placeholder = "달력 데이터 불러오는 중..."; dateInput.disabled = true;
         document.getElementById("counselingTimeContainer").style.display = "none";
         document.getElementById("popupOverlay").style.display = "block";
         document.getElementById("counselingPopup").style.display = "block";
@@ -353,7 +322,6 @@
             });
     }
 
-    // flatpickr(달력) 초기화
     function initFlatpickr(data) {
         const b = document.getElementById("building").value;
         const s1 = document.getElementById("seatNumber").value;
@@ -384,14 +352,12 @@
 
         const dateInput = document.getElementById("counselingDateSelect");
         if (fpInstance) fpInstance.destroy(); 
-        
         if (availableDates.length === 0) { 
             dateInput.placeholder = isCounselingCancel ? "취소할 상담 내역이 없습니다." : "신청 가능한 날짜가 없습니다."; 
             dateInput.disabled = true; return; 
         }
         dateInput.placeholder = "여기를 클릭하여 달력을 여세요"; 
         dateInput.disabled = false;
-        
         fpInstance = flatpickr("#counselingDateSelect", { 
             locale: "ko", 
             enable: availableDates, 
@@ -401,7 +367,6 @@
         });
     }
 
-    // 상담 시간 버튼 렌더링
     function renderTimeSlots(colIdx, dateStr) {
         selectedCounselingDate = dateStr; 
         selectedCounselingTime = "";
@@ -443,13 +408,11 @@
         }
     }
 
-    // 상담 팝업 -> 제출 확인으로
     document.getElementById("counselingSubmitButton").onclick = function() {
         if (!selectedCounselingTime) { alert("상담 시간을 선택해주세요!"); return; }
         const b = document.getElementById("building").value;
         const s = document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
         const teacher = document.getElementById("counselingTeacherName").textContent;
-        
         document.getElementById("c_origSeat").textContent = `${b} ${s}`;
         document.getElementById("c_targetSeat").textContent = teacher + " 선생님";
         document.getElementById("c_returnTime").textContent = `${selectedCounselingDate} ${selectedCounselingTime}`;
@@ -459,15 +422,12 @@
         selectedTargetSeat = teacher; 
     };
 
-    // 데이터 최종 전송
     function submitMoveData(bld, sNum, ret, reas, other, score, target, cDate) {
         const now = new Date();
         const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
         const kstNow = new Date(utc + (9 * 3600000));
-        
         const date = `${kstNow.getFullYear()}-${String(kstNow.getMonth()+1).padStart(2,'0')}-${String(kstNow.getDate()).padStart(2,'0')}`;
         const time = `${String(kstNow.getHours()).padStart(2,'0')}:${String(kstNow.getMinutes()).padStart(2,'0')}:${String(kstNow.getSeconds()).padStart(2,'0')}`;
-        
         const cleanR = reas === "기타" ? other : reas;
         const key = bld.replace("관", "").trim() + sNum;
         const studentName = studentNameMap[key] || "미확인";
@@ -478,58 +438,80 @@
             studentName: studentName, counselingDate: cDate 
         };
         
-        const displayReason = reas.includes("상담") ? `${cleanR} ➡️ ${target} ${cDate?'('+cDate.slice(-5)+')':''}` : cleanR;
+        if (reas.includes("심야자습")) { if (reas === "심야자습 신청") userReservations[key] = target; else delete userReservations[key]; }
+        const displayReason = (reas.includes("심야자습") || reas.includes("상담")) ? `${cleanR} ➡️ ${target} ${cDate?'('+cDate.slice(-5)+')':''}` : cleanR;
         
         moveList.unshift({ ...data, displayReason: displayReason }); 
         refreshMoveList();
-        
         document.getElementById("moveForm").reset(); 
         document.getElementById("scoreDiv").style.display = "none"; 
-        document.getElementById("otherReason").style.display = "none";
-        document.getElementById("otherReasonLabel").style.display = "none";
-        resetReturnTimeOptions();
+        setReturnTimeOptionsForNightStudy(false);
         
-        fetch(SCRIPT_URL, { 
-            method: 'POST', 
-            mode: 'no-cors',
-            body: JSON.stringify(data) 
-        }).catch(err => console.error("전송 에러"));
+        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) }).catch(err => console.error("전송 에러"));
     }
 
-    // 최종 확인 팝업 '네' 버튼
     document.getElementById("finalYesButton").onclick = function() {
         const b = document.getElementById("building").value; 
         const s = document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
         const reas = document.getElementById("reason").value;
         const time = reas.includes("상담") ? selectedCounselingTime : document.getElementById("returnTime").value;
-        
         submitMoveData(b, s, time, reas, "", null, selectedTargetSeat, reas.includes("상담") ? selectedCounselingDate : "");
-        
         document.getElementById("finalConfirmPopup").style.display = "none"; 
         document.getElementById("popupOverlay").style.display = "none";
     };
 
-    // 최종 확인 팝업 '아니오' 버튼 및 취소
     document.getElementById("finalNoButton").onclick = function() { 
         document.getElementById("finalConfirmPopup").style.display = "none"; 
-        document.getElementById("counselingPopup").style.display = "block"; 
+        const reas = document.getElementById("reason").value; 
+        if(reas.includes("상담")) document.getElementById("counselingPopup").style.display = "block"; 
+        else document.getElementById("popup").style.display = "block"; 
     };
-    document.getElementById("counselingCancelButton").onclick = () => { 
-        document.getElementById("counselingPopup").style.display = "none"; 
-        document.getElementById("popupOverlay").style.display = "none"; 
+
+    document.getElementById("modalBuilding").addEventListener("change", function() {
+        const bld = this.value; const grid = document.getElementById("seatGrid"); selectedTargetSeat = "";
+        if (!bld || !seatData[bld]) { document.getElementById("seatMapContainer").style.display = "none"; return; }
+        const key = document.getElementById("building").value.replace("관", "").trim() + document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
+        const gender = studentGenderMap[key]; const reason = document.getElementById("reason").value; const myRes = userReservations[key];
+        grid.style.gridTemplateColumns = `42px 42px 14px 42px 42px 14px 42px 42px`; grid.innerHTML = "";
+        seatData[bld].forEach((row, r) => { row.forEach((cell, c) => {
+            const div = document.createElement("div"); div.className = "seat-cell"; const txt = cell.trim(); div.style.gridRow = r+1; div.style.gridColumn = c+1;
+            if ((c===2 || c===5) && (r<=15 || r>=20)) { div.className += " aisle"; grid.appendChild(div); return; }
+            if (!txt) div.className += " empty";
+            else if (txt.includes("출입문")) { div.className += " door"; div.innerHTML = "🚪<br>문"; div.style.gridColumn = "7/9"; div.style.gridRow = `${r+1}/span 2`; }
+            else {
+                div.className += " seat"; div.textContent = txt; let ok = true; let rs = false;
+                if (reason === "심야자습 취소") { if(txt !== myRes) ok = false; }
+                else { const n = parseInt(txt.slice(-2)); if((gender==="남" && n>16) || (gender==="여" && (n<21 || n>36))) ok = false; if (Object.values(userReservations).includes(txt)) { ok = false; rs = true; } }
+                if (rs) div.className += " reserved"; else if (!ok) div.className += " disabled";
+                else div.onclick = function() { const p = grid.querySelector(".selected"); if(p) p.classList.remove("selected"); this.classList.add("selected"); selectedTargetSeat = txt; };
+            } grid.appendChild(div);
+        }); });
+        document.getElementById("seatMapContainer").style.display = "block";
+    });
+
+    document.getElementById("popupSubmitButton").onclick = function() {
+        if (!selectedTargetSeat) { alert("좌석을 선택해주세요!"); return; }
+        document.getElementById("c_origSeat").textContent = document.getElementById("building").value + " " + document.getElementById("seatNumber").value + document.getElementById("seatNumber2").value;
+        document.getElementById("c_targetSeat").textContent = selectedTargetSeat;
+        document.getElementById("c_returnTime").textContent = document.getElementById("returnTime").value + "교시";
+        document.getElementById("confirmReasonTitle").textContent = `[${document.getElementById("reason").value}] 최종 확인`;
+        document.getElementById("popup").style.display = "none"; 
+        document.getElementById("finalConfirmPopup").style.display = "block";
     };
+
+    document.getElementById("popupCancelButton").onclick = () => { document.getElementById("popup").style.display = "none"; document.getElementById("popupOverlay").style.display = "none"; };
+    document.getElementById("counselingCancelButton").onclick = () => { document.getElementById("counselingPopup").style.display = "none"; document.getElementById("popupOverlay").style.display = "none"; };
     
-    // 테이블 새로고침
     function refreshMoveList() {
         const tbody = document.querySelector("#moveList tbody"); tbody.innerHTML = "";
         moveList.forEach(m => { 
             const r = document.createElement("tr"); 
-            r.innerHTML = `<td>${m.building}</td><td>${m.seatNumber}</td><td>${m.displayReason}</td><td>${m.returnTime}${m.reason.includes('상담')?'':'교시'}</td><td>${m.inputDate}</td><td>${m.inputTime}</td><td>${m.score || m.targetSeat || '-'}</td>`; 
+            r.innerHTML = `<td>${m.building}</td><td>${m.seatNumber}</td><td>${m.returnTime}${m.reason.includes('상담')?'':'교시'}</td><td>${m.displayReason}</td><td>${m.inputDate}</td><td>${m.inputTime}</td><td>${m.score || m.targetSeat || '-'}</td>`; 
             tbody.appendChild(r); 
         });
     }
-
     function resetTable() { moveList = []; refreshMoveList(); }
     </script>
 </body>
 </html>
+
